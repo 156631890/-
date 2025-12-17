@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Yiwu Sourcing AI",
+  "description": "A dual-interface app for sourcing agents (mobile) and documentation specialists (desktop). Features AI-powered data enrichment for HS Codes and materials.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
