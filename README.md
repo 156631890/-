@@ -1,20 +1,52 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 义乌采购 AI 助手 (Yiwu Sourcing AI Assistant)
 
-# Run and deploy your AI Studio app
+## 项目目标
 
-This contains everything you need to run your app locally.
+本项目旨在为义乌市场的采购代理和单证专员提供一个高效、智能的协作工具，解决从**市场选品**到**外贸单证制作**之间的数据断层问题。
 
-View your app in AI Studio: https://ai.studio/apps/drive/1ogxrN5M09a88pnYyoBSnHFJadjy-SZxA
+主要目标包括：
+1.  **提升采集效率**：通过移动端优化的界面，让采购员在市场走访时能快速拍摄并记录产品核心信息（图片、价格、起订量等）。
+2.  **自动化数据处理**：利用 Google Gemini AI 自动完善产品描述、识别材质、并推荐准确的 HS 编码，减少人工录入错误。
+3.  **无缝导出**：一键生成带图片的专业 Excel 报价单和 PDF 产品目录，大幅缩短整理资料的时间。
+4.  **离线可用**：确保在市场信号不佳时，数据依然能安全保存在本地。
 
-## Run Locally
+## 操作方法
 
-**Prerequisites:**  Node.js
+### 1. 角色选择
+打开应用后，根据您的工作场景选择角色：
+- **我是采购员 (Sourcing Agent)**：适合在手机上使用，界面简洁，侧重于快速拍照和录入。
+- **我是单证员 (Documentation Specialist)**：适合在电脑上使用，提供完整的数据表格和编辑功能。
 
+### 2. 移动端采购录入 (采购员模式)
+- **拍照/上传**：点击相机图标拍摄产品照片。
+- **快速记录**：输入核心采购信息，如人民币价格、起订量 (MOQ)、包装方式等。
+- **自动保存**：所有数据会自动保存到本地数据库，无需担心丢失。
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 3. 桌面端管理与导出 (单证员模式)
+- **数据看板**：在“仪表盘”中查看所有采购员录入的产品列表。
+- **AI 智能完善**：
+  - 点击“AI 完善”按钮，系统将根据图片自动生成英文产品名称、材质描述和推荐 HS 编码。
+- **编辑与审核**：点击任意产品卡片进行详细信息的修改和确认。
+- **导出报表**：
+  - **导出 Excel**：生成包含产品缩略图的标准外贸报价单。
+  - **导出 PDF**：生成图文并茂的产品目录 (Catalog)。
+
+## 技术栈
+
+- **前端框架**: React 19, TypeScript, Vite
+- **UI 样式**: Tailwind CSS
+- **人工智能**: Google Gemini API (@google/genai)
+- **本地存储**: IndexedDB (idb)
+- **文档处理**: ExcelJS (Excel导出), jsPDF (PDF导出)
+
+## 快速开始
+
+1.  克隆项目并安装依赖：
+    ```bash
+    npm install
+    ```
+2.  配置环境变量 (参考 `.env.example`)，填入 `GEMINI_API_KEY`。
+3.  启动开发服务器：
+    ```bash
+    npm run dev
+    ```

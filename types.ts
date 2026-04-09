@@ -1,3 +1,4 @@
+
 export enum ProcessingStatus {
   DRAFT = 'DRAFT',
   AI_PROCESSING = 'AI_PROCESSING',
@@ -73,6 +74,8 @@ export interface Product {
   
   timestamp: number;
   status: ProcessingStatus;
+  // Grounding URLs for transparency as per Gemini API guidelines
+  groundingUrls?: { title?: string; uri: string }[];
 }
 
 export interface AIEnrichmentResult {
@@ -84,4 +87,5 @@ export interface AIEnrichmentResult {
   taxRate: number;
   categoryMain: string;
   categorySub: string;
+  groundingUrls?: { title?: string; uri: string }[];
 }

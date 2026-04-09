@@ -1,26 +1,13 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIEnrichmentResult, SupplierInfo } from "../types";
 
-// Safe access to environment variables
-const getApiKey = () => {
-  try {
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-      return process.env.API_KEY;
-    }
-  } catch (e) {
-    // Ignore ReferenceError if process is not defined
-  }
-  return undefined;
-};
-
+/**
+ * Initialize the Google GenAI client using the environment variable API_KEY.
+ * Always follow the required initialization pattern: new GoogleGenAI({ apiKey: process.env.API_KEY })
+ */
 const getClient = () => {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    // For local dev or environments where process.env is not polyfilled
-    console.warn("API Key missing. Check process.env.API_KEY");
-    throw new Error("API Key configuration missing. Please check settings.");
-  }
-  return new GoogleGenAI({ apiKey });
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 // Helper to safely parse JSON from AI response, stripping Markdown code blocks if present
@@ -31,7 +18,6 @@ const safeJsonParse = (text: string | undefined) => {
     const cleanText = text.replace(/```json\n?|```/g, '').trim();
     // Handle cases where AI returns plain text instead of JSON
     if (!cleanText.startsWith('{') && !cleanText.startsWith('[')) {
-       // If strict JSON mode is on, this shouldn't happen, but good fallback
        const firstBrace = cleanText.indexOf('{');
        const lastBrace = cleanText.lastIndexOf('}');
        if (firstBrace !== -1 && lastBrace !== -1) {
@@ -47,14 +33,14 @@ const safeJsonParse = (text: string | undefined) => {
   }
 };
 
-// Business Card Analysis
+// Business Card Analysis using Gemini 3 Flash
 export const analyzeBusinessCard = async (base64Image: string): Promise<SupplierInfo> => {
   try {
     const ai = getClient();
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: {
         parts: [
           { inlineData: { mimeType: "image/jpeg", data: cleanBase64 } },
@@ -89,7 +75,7 @@ export const analyzeBusinessCard = async (base64Image: string): Promise<Supplier
   }
 };
 
-// Text-based enrichment with SEARCH GROUNDING
+// Text-based enrichment with SEARCH GROUNDING using Gemini 3 Flash
 export const enrichProductData = async (nameCn: string): Promise<AIEnrichmentResult> => {
   try {
     const ai = getClient();
@@ -123,21 +109,23 @@ export const enrichProductData = async (nameCn: string): Promise<AIEnrichmentRes
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: prompt,
       config: {
         tools: [{googleSearch: {}}],
-        // Note: responseMimeType: "application/json" is NOT supported with Search tools.
-        // We rely on the prompt to request JSON.
+        // responseMimeType: "application/json" is NOT supported with Search tools.
       }
     });
     
-    // Log grounding metadata if available (optional, for debug)
-    if (response.candidates?.[0]?.groundingMetadata) {
-        // console.log("Grounding Metadata:", response.candidates[0].groundingMetadata);
-    }
+    // Extract grounding URLs as per required guidelines
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    const groundingUrls = groundingChunks?.map((chunk: any) => ({
+      title: chunk.web?.title,
+      uri: chunk.web?.uri
+    })).filter((u: any) => u.uri) || [];
 
-    return safeJsonParse(response.text) as AIEnrichmentResult;
+    const result = safeJsonParse(response.text) as AIEnrichmentResult;
+    return { ...result, groundingUrls };
   } catch (error) {
     console.error("AI Enrichment failed:", error);
     throw error;
@@ -154,17 +142,17 @@ export interface ImageAnalysisResult {
   boxWidth: number;
   boxHeight: number;
   pcsPerBox: number;
-  hsCode: string; // Added HS Code
+  hsCode: string;
 }
 
-// Image-based analysis
+// Image-based analysis using Gemini 3 Flash
 export const analyzeImage = async (base64Image: string): Promise<ImageAnalysisResult> => {
   try {
     const ai = getClient();
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash", 
+      model: "gemini-3-flash-preview", 
       contents: {
         parts: [
           { inlineData: { mimeType: "image/jpeg", data: cleanBase64 } },
