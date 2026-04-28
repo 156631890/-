@@ -25,7 +25,7 @@ export interface DraftFolder {
 }
 
 interface MobileEntryProps {
-  onSave: (product: Product) => void;
+  onSave: (product: Product) => void | Promise<void>;
   onUpdateProduct?: (product: Product) => void;
   onDeleteProduct?: (ids: string[]) => void;
   isDesktopMode?: boolean;
@@ -121,6 +121,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
         setViewMode('folderDetail');
       } catch (err) {
         console.error(err);
+        if (isMounted.current) alert("Business card analysis failed. Check the AI proxy settings and try again.");
       } finally {
         if (isMounted.current) setIsProcessing(false);
       }
@@ -219,9 +220,11 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
             status: ProcessingStatus.DRAFT,
             timestamp: Date.now()
           };
-          onSave({ ...newProduct, ...calculateMetrics(newProduct) });
+          await onSave({ ...newProduct, ...calculateMetrics(newProduct) });
           // Clean up processed draft
-          setFolders(prev => prev.map(f => ({ ...f, images: f.images.filter(img => img.id !== item.img.id) })).filter(f => f.images.length > 0));
+          setFolders(prev => prev
+            .map(f => f.id === activeFolderId ? { ...f, images: f.images.filter(img => img.id !== item.img.id) } : f)
+            .filter(f => f.id !== activeFolderId || f.images.length > 0));
           setSelectedImageIds(prev => { const next = new Set(prev); next.delete(item.img.id); return next; });
           success++;
         } catch (e) {

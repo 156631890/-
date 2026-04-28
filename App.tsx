@@ -45,6 +45,7 @@ export default function App() {
       setProducts(prev => prev.filter(product => product.id !== newProduct.id || !sameJson(product, newProduct)));
       console.error("Failed to save product:", error);
       alert("Error saving data. Please check storage space.");
+      throw error;
     }
   };
 

@@ -18,12 +18,7 @@ export const analyzeBusinessCard = async (base64Image: string): Promise<Supplier
     });
   } catch (error) {
     console.error('Business Card Analysis failed:', error);
-    return {
-      companyName: '',
-      contactPerson: '',
-      phone: '',
-      address: '',
-    };
+    throw error;
   }
 };
 
@@ -48,7 +43,7 @@ export const analyzeImage = async (base64Image: string): Promise<ImageAnalysisRe
     });
 
     return {
-      nameCn: result.nameCn || '待识别商品',
+      nameCn: result.nameCn || 'Unknown Product',
       priceRmb: normalizeNumber(result.priceRmb),
       moq: normalizeNumber(result.moq),
       nameEn: result.nameEn || 'Unknown Product',
@@ -61,17 +56,6 @@ export const analyzeImage = async (base64Image: string): Promise<ImageAnalysisRe
     };
   } catch (error) {
     console.error('Image Analysis failed:', error);
-    return {
-      nameCn: '识别失败 (Manual Entry)',
-      priceRmb: 0,
-      moq: 0,
-      nameEn: '',
-      materialEn: '',
-      hsCode: '',
-      boxLength: 0,
-      boxWidth: 0,
-      boxHeight: 0,
-      pcsPerBox: 0,
-    };
+    throw error;
   }
 };

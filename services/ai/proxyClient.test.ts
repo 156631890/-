@@ -110,4 +110,15 @@ describe('requestAiJson', () => {
       'AI proxy request failed with 502: upstream failed',
     );
   });
+
+  it('requires an explicit proxy compatibility mode', async () => {
+    setProxyEnv({ VITE_AI_PROXY_MODE: '' });
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(requestAiJson<{ ok: boolean }>({ parts: [{ type: 'text', text: 'x' }] })).rejects.toThrow(
+      'Missing VITE_AI_PROXY_MODE',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

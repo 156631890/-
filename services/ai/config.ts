@@ -11,13 +11,17 @@ declare global {
 export const getAiProxyConfig = (): AiProxyConfig => {
   const env = import.meta.env;
   const baseUrl = String(env.VITE_AI_PROXY_BASE_URL ?? '').trim().replace(/\/+$/, '');
-  const modeValue = String(env.VITE_AI_PROXY_MODE ?? 'openai-compatible').trim();
+  const modeValue = String(env.VITE_AI_PROXY_MODE ?? '').trim();
   const model = String(env.VITE_AI_MODEL ?? '').trim();
   const apiKey = String(env.VITE_AI_PROXY_API_KEY ?? '').trim();
   const timeoutMs = Number(env.VITE_AI_TIMEOUT_MS);
 
   if (!baseUrl) {
     throw new Error('Missing VITE_AI_PROXY_BASE_URL. Configure the Codex reverse-proxy API URL.');
+  }
+
+  if (!modeValue) {
+    throw new Error('Missing VITE_AI_PROXY_MODE. Set it to openai-compatible or gemini-compatible.');
   }
 
   if (!VALID_MODES.includes(modeValue as AiProxyMode)) {

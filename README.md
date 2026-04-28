@@ -38,6 +38,8 @@ VITE_AI_TIMEOUT_MS=60000
 `VITE_AI_PROXY_MODE=openai-compatible` calls `{baseUrl}/chat/completions`.
 `VITE_AI_PROXY_MODE=gemini-compatible` calls `{baseUrl}/models/{model}:generateContent`.
 
+All `VITE_` values are visible in the browser bundle. Use a restricted proxy token for `VITE_AI_PROXY_API_KEY`; keep provider credentials on the reverse-proxy server, not in this app.
+
 ## Verification
 
 ```bash
