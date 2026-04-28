@@ -2,6 +2,12 @@ import { AiProxyConfig, AiProxyMode } from './types';
 
 const VALID_MODES: AiProxyMode[] = ['openai-compatible', 'gemini-compatible'];
 
+declare global {
+  interface ImportMeta {
+    readonly env: Record<string, string | undefined>;
+  }
+}
+
 export const getAiProxyConfig = (): AiProxyConfig => {
   const env = import.meta.env;
   const baseUrl = String(env.VITE_AI_PROXY_BASE_URL ?? '').trim().replace(/\/+$/, '');

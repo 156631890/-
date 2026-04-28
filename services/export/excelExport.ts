@@ -4,6 +4,7 @@ import { calculateProductMetrics, getCartonQuantity, getOrderQuantity } from '..
 import { ExportInput, ExportResult, ExportType } from './exportTypes';
 
 type ImageExtension = 'jpeg' | 'png';
+type WorksheetImageRange = Parameters<ExcelJS.Worksheet['addImage']>[1];
 
 const centerStyle: Partial<ExcelJS.Alignment> = { vertical: 'middle', horizontal: 'center', wrapText: true };
 const borderStyle: Partial<ExcelJS.Borders> = {
@@ -148,11 +149,12 @@ export async function exportExcel(input: ExportInput): Promise<ExportResult> {
 
       try {
         const imageId = workbook.addImage({ base64: image.base64, extension: image.extension });
-        sheet.addImage(imageId, {
+        const imageRange = {
           tl: { col: 0, row: rowIndex - 1 },
           br: { col: 1, row: rowIndex },
-          editAs: 'twoCell',
-        });
+          editAs: 'twoCell' as const,
+        } as unknown as WorksheetImageRange;
+        sheet.addImage(imageId, imageRange);
       } catch {
         skippedImages += 1;
       }
