@@ -14,6 +14,10 @@ describe('parseJsonObject', () => {
     expect(parseJsonObject<{ price: number }>('result: {"price": 12.5} done')).toEqual({ price: 12.5 });
   });
 
+  it('parses the first balanced JSON object when trailing text contains braces', () => {
+    expect(parseJsonObject<{ ok: boolean }>('result: {"ok":true}\nNote: {"ignored":true}')).toEqual({ ok: true });
+  });
+
   it('throws a readable error for invalid text', () => {
     expect(() => parseJsonObject('not json')).toThrow('AI response did not contain a JSON object');
   });

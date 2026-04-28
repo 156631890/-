@@ -82,7 +82,6 @@ describe('requestAiJson', () => {
       expect.objectContaining({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'gemini-proxy',
           contents: [
             {
               role: 'user',

@@ -93,7 +93,6 @@ export const requestAiJson = async <T>({ parts, system }: AiJsonRequest): Promis
           temperature: 0.2,
         }
       : {
-          model: config.model,
           contents: [{ role: 'user', parts: toGeminiParts(parts) }],
           generationConfig: { temperature: 0.2 },
         };
