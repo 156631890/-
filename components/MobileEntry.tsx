@@ -1,19 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Save, Box, Home, Plus, Layers, Loader2, ImagePlus, ChevronRight, Package, Tag, Store, DollarSign, Zap, X, ArrowLeft, CheckSquare, Square, Trash2, Sparkles, Download, RefreshCw, FileText, Database, Printer, Contact, UserCircle, Briefcase, Globe, ScanLine, Edit2, Folder, FolderPlus, ArrowUpRight, Grid, Image as ImageIcon, Eraser, FileDown } from 'lucide-react';
 import { AppSettings, DEFAULT_APP_SETTINGS, Product, ProcessingStatus, SupplierInfo, Language } from '../types';
-import { analyzeImage, enrichProductData, analyzeBusinessCard } from '../services/geminiService';
+import { analyzeImage, analyzeBusinessCard } from '../services/geminiService';
 import { translations } from '../utils/i18n';
 import { exportExcel } from '../services/export/excelExport';
 import { exportPdf } from '../services/export/pdfExport';
 import { ExportType } from '../services/export/exportTypes';
+import { ProcessingOverlay } from './common/ProcessingOverlay';
+import { ShopFolderList } from './mobile/ShopFolderList';
+import { ShopFolderDetail } from './mobile/ShopFolderDetail';
+import { MobileHistory } from './mobile/MobileHistory';
 
-interface DraftImage {
+export interface DraftImage {
   id: string;
   url: string;
   timestamp: number;
 }
 
-interface DraftFolder {
+export interface DraftFolder {
   id: string;
   name: string;
   supplier: SupplierInfo;
@@ -175,42 +178,51 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
     if (selectedImageIds.size === 0) return;
     setIsProcessing(true);
     let processed = 0; const total = selectedImageIds.size;
+    let success = 0;
+    let failed = 0;
     const queue: { img: DraftImage, supplier: SupplierInfo }[] = [];
     folders.forEach(f => { f.images.forEach(img => { if (selectedImageIds.has(img.id)) queue.push({ img, supplier: f.supplier }); }); });
     
-    for (const item of queue) {
-      if (!isMounted.current) break;
-      setProcessingStatus({ current: processed + 1, total, text: `Analyzing item ${processed + 1}/${total}` });
-      try {
-        const aiData = await analyzeImage(item.img.url);
-        const newProduct: Product = { 
-          id: Date.now().toString() + "_" + Math.random().toString(36).substr(2, 5), 
-          sku: `YW-${Math.floor(Math.random() * 90000) + 10000}`, 
-          photoUrl: item.img.url, 
-          supplier: item.supplier, 
-          nameCn: aiData.nameCn, 
-          nameEn: aiData.nameEn, 
-          materialEn: aiData.materialEn, 
-          priceRmb: aiData.priceRmb, 
-          moq: aiData.moq, 
-          shopNo: item.supplier.address || "TBD", 
-          hsCode: aiData.hsCode, 
-          boxLength: aiData.boxLength, 
-          boxWidth: aiData.boxWidth, 
-          boxHeight: aiData.boxHeight, 
-          pcsPerBox: aiData.pcsPerBox, 
-          status: ProcessingStatus.DRAFT, 
-          timestamp: Date.now() 
-        };
-        onSave({ ...newProduct, ...calculateMetrics(newProduct) });
-        // Clean up processed draft
-        setFolders(prev => prev.map(f => ({ ...f, images: f.images.filter(img => img.id !== item.img.id) })).filter(f => f.images.length > 0));
-        setSelectedImageIds(prev => { const next = new Set(prev); next.delete(item.img.id); return next; });
-      } catch (e) { console.error(e); }
-      processed++;
+    try {
+      for (const item of queue) {
+        if (!isMounted.current) break;
+        setProcessingStatus({ current: processed + 1, total, text: `Analyzing item ${processed + 1}/${total}` });
+        try {
+          const aiData = await analyzeImage(item.img.url);
+          const newProduct: Product = {
+            id: Date.now().toString() + "_" + Math.random().toString(36).substr(2, 5),
+            sku: `YW-${Math.floor(Math.random() * 90000) + 10000}`,
+            photoUrl: item.img.url,
+            supplier: item.supplier,
+            nameCn: aiData.nameCn,
+            nameEn: aiData.nameEn,
+            materialEn: aiData.materialEn,
+            priceRmb: aiData.priceRmb,
+            moq: aiData.moq,
+            shopNo: item.supplier.address || "TBD",
+            hsCode: aiData.hsCode,
+            boxLength: aiData.boxLength,
+            boxWidth: aiData.boxWidth,
+            boxHeight: aiData.boxHeight,
+            pcsPerBox: aiData.pcsPerBox,
+            status: ProcessingStatus.DRAFT,
+            timestamp: Date.now()
+          };
+          onSave({ ...newProduct, ...calculateMetrics(newProduct) });
+          // Clean up processed draft
+          setFolders(prev => prev.map(f => ({ ...f, images: f.images.filter(img => img.id !== item.img.id) })).filter(f => f.images.length > 0));
+          setSelectedImageIds(prev => { const next = new Set(prev); next.delete(item.img.id); return next; });
+          success++;
+        } catch (e) {
+          failed++;
+          console.error('Failed to process selected image:', e);
+        }
+        processed++;
+      }
+    } finally {
+      setIsProcessing(false);
     }
-    setIsProcessing(false); 
-    if (isMounted.current) { alert(t.batchComplete); setViewMode('history'); }
+    if (isMounted.current) { alert(`Batch complete. Success: ${success}. Failed: ${failed}.`); setViewMode('history'); }
   };
 
   const handleExport = async (format: 'excel' | 'pdf', type: ExportType) => {
@@ -231,149 +243,71 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
 
   if (isProcessing) {
     return (
-      <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-md flex flex-col items-center justify-center text-indigo-600">
-        <Loader2 className="animate-spin mb-4" size={48} />
-        <p className="font-bold text-lg text-slate-800">{processingStatus.text}</p>
-        <div className="w-64 h-2 bg-slate-100 rounded-full mt-4 overflow-hidden">
-          <div className="h-full bg-indigo-600 transition-all" style={{ width: `${(processingStatus.current / processingStatus.total) * 100}%` }}></div>
-        </div>
-      </div>
+      <ProcessingOverlay text={processingStatus.text} current={processingStatus.current} total={processingStatus.total} />
     );
   }
 
   if (viewMode === 'folders') {
     return (
-      <div className="flex flex-col h-full bg-slate-50 relative">
-        <div className="bg-white border-b px-6 py-4 flex justify-between items-center sticky top-0 z-20">
-          <h1 className="text-xl font-bold">{t.myShops}</h1>
-          <button onClick={() => {
-            const language = currentLang === 'en' ? 'zh' : 'en';
-            if (onSettingsChange) {
-              onSettingsChange({ ...settings, language });
-            } else {
-              onLanguageChange?.(language);
-            }
-          }} className="text-xs font-bold px-2.5 py-1.5 bg-slate-50 rounded-lg border">{currentLang.toUpperCase()}</button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
-          <div className="bg-indigo-600 rounded-2xl p-4 flex items-center justify-between shadow-lg text-white">
-            <div className="flex items-center gap-4"><div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center"><Store size={24} /></div><div><div className="font-bold">{t.newShop}</div><div className="text-xs opacity-70">{t.scanCardToCreate}</div></div></div>
-            <label className="bg-white text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform"><ScanLine size={20} /><input type="file" accept="image/*" className="hidden" ref={cardInputRef} onChange={handleCreateFolder} /></label>
-          </div>
-          {folders.length === 0 ? (
-            <div className="text-center py-20 text-slate-400"><FolderPlus size={48} className="mx-auto mb-3 opacity-20" /><p className="text-sm">{t.emptyFolders}</p></div>
-          ) : (
-            folders.map(f => (
-              <div key={f.id} className="bg-white rounded-2xl border p-4 shadow-sm flex items-center justify-between" onClick={() => { setActiveFolderId(f.id); setViewMode('folderDetail'); }}>
-                <div className="flex items-center gap-3"><div className="bg-amber-100 text-amber-600 p-2.5 rounded-lg"><Folder size={20} fill="currentColor" className="opacity-80"/></div><div><div className="font-bold text-sm">{f.name}</div><div className="text-xs text-slate-400">{f.images.length} {t.photos}</div></div></div>
-                <ChevronRight size={20} className="text-slate-300" />
-              </div>
-            ))
-          )}
-        </div>
-        {!isDesktopMode && (
-          <nav className="glass-nav absolute bottom-0 w-full pb-8 pt-4 px-12 flex justify-between items-center z-10">
-            <button className="flex flex-col items-center gap-1.5 text-indigo-600 relative"><div className="absolute -top-1 w-8 h-1 bg-indigo-600 rounded-full"></div><Grid size={24} strokeWidth={2.5} /><span className="text-[10px] font-bold">{t.myShops}</span></button>
-            <button onClick={() => setViewMode('history')} className="flex flex-col items-center gap-1.5 text-slate-300"><Database size={24} /><span className="text-[10px] font-bold">{t.history}</span></button>
-          </nav>
-        )}
-      </div>
+      <ShopFolderList
+        folders={folders}
+        currentLang={currentLang}
+        labels={t}
+        onToggleLanguage={() => {
+          const language = currentLang === 'en' ? 'zh' : 'en';
+          if (onSettingsChange) {
+            onSettingsChange({ ...settings, language });
+          } else {
+            onLanguageChange?.(language);
+          }
+        }}
+        onCreateFolder={handleCreateFolder}
+        onOpenFolder={(folderId) => { setActiveFolderId(folderId); setViewMode('folderDetail'); }}
+        cardInputRef={cardInputRef}
+        isDesktopMode={isDesktopMode}
+        onOpenHistory={() => setViewMode('history')}
+      />
     );
   }
 
   if (viewMode === 'folderDetail' && activeFolderId) {
     const folder = folders.find(f => f.id === activeFolderId);
     if (!folder) { setViewMode('folders'); return null; }
-    
-    const allInFolderIds = folder.images.map(img => img.id);
-    const selectedInThisFolder = folder.images.filter(img => selectedImageIds.has(img.id));
-    const isAllSelected = allInFolderIds.length > 0 && allInFolderIds.every(id => selectedImageIds.has(id));
 
     return (
-      <div className="flex flex-col h-full bg-white relative">
-        <div className="bg-white border-b px-4 py-3 flex items-center justify-between sticky top-0 z-20">
-          <button onClick={() => setViewMode('folders')} className="p-2 -ml-2 text-slate-600"><ArrowLeft size={20} /></button>
-          <div className="text-center">
-            <div className="font-bold text-slate-900 text-sm">{folder.name}</div>
-            <div className="text-[10px] text-slate-400">{folder.images.length} {t.photos} ({selectedInThisFolder.length} {t.selected})</div>
-          </div>
-          <button 
-            onClick={handleToggleSelectAllInFolder}
-            className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors ${isAllSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-indigo-600'}`}
-          >
-            {isAllSelected ? t.unselectAll : t.selectAll}
-          </button>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-1 pb-32">
-          <div className="grid grid-cols-3 gap-1">
-            {folder.images.map(img => (
-              <div key={img.id} onClick={() => toggleImageSelection(img.id)} className="aspect-square relative cursor-pointer group">
-                <img src={img.url} className="w-full h-full object-cover transition-opacity group-active:opacity-70" />
-                <div className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shadow-sm ${selectedImageIds.has(img.id) ? 'bg-indigo-600 border-indigo-600 scale-110' : 'bg-black/20 border-white/50 scale-100'}`}>
-                  {selectedImageIds.has(img.id) && <CheckSquare size={14} className="text-white"/>}
-                </div>
-              </div>
-            ))}
-            <label className="aspect-square bg-slate-50 flex flex-col items-center justify-center text-indigo-600 cursor-pointer border-2 border-dashed border-indigo-100 rounded-lg hover:bg-indigo-50 transition-colors">
-              <Plus size={32} strokeWidth={3} />
-              <span className="text-[10px] font-bold mt-1 uppercase tracking-wider">{t.addPhotos}</span>
-              <input type="file" multiple accept="image/*" onChange={handleAddPhotos} className="hidden" ref={fileInputRef} />
-            </label>
-          </div>
-        </div>
-        
-        {selectedImageIds.size > 0 && (
-          <div className="absolute bottom-6 left-6 right-6 z-30 animate-in slide-in-from-bottom-4 duration-300">
-            <button 
-              onClick={handleProcessSelected} 
-              className="w-full bg-slate-900 text-white rounded-2xl py-4 shadow-xl flex items-center justify-center gap-2 font-bold text-sm active:scale-95 transition-transform"
-            >
-              <Sparkles size={18} className="text-indigo-300"/> 
-              {t.processSelected} ({selectedImageIds.size})
-            </button>
-          </div>
-        )}
-      </div>
+      <ShopFolderDetail
+        folder={folder}
+        selectedImageIds={selectedImageIds}
+        labels={t}
+        fileInputRef={fileInputRef}
+        onBack={() => setViewMode('folders')}
+        onToggleSelectAll={handleToggleSelectAllInFolder}
+        onToggleImage={toggleImageSelection}
+        onAddPhotos={handleAddPhotos}
+        onProcessSelected={handleProcessSelected}
+      />
     );
   }
 
   // History / List View
   return (
-    <div className="flex flex-col h-full bg-slate-50 relative">
-      {showExportMenu && (
-        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-end justify-center pb-8">
-           <div className="bg-white w-[90%] max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
-              <div className="flex justify-between items-center"><h3 className="font-bold text-lg">{t.exportOptions}</h3><button onClick={()=>setShowExportMenu(false)} className="p-1 text-slate-400"><X size={20}/></button></div>
-              <div className="space-y-3">
-                 <div className="grid grid-cols-2 gap-2"><button onClick={()=>handleExport('excel', 'quotation')} className="py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold">QTN.xlsx</button><button onClick={()=>handleExport('pdf', 'quotation')} className="py-3 bg-red-600 text-white rounded-xl text-xs font-bold">QTN.pdf</button></div>
-                 <div className="grid grid-cols-2 gap-2"><button onClick={()=>handleExport('excel', 'packinglist')} className="py-3 bg-green-600 text-white rounded-xl text-xs font-bold">PKL.xlsx</button><button onClick={()=>handleExport('pdf', 'packinglist')} className="py-3 bg-red-600 text-white rounded-xl text-xs font-bold">PKL.pdf</button></div>
-              </div>
-           </div>
-        </div>
-      )}
-      <div className="px-6 py-4 bg-white shadow-sm flex justify-between items-center sticky top-0 z-10">
-        <h2 className="text-xl font-bold">{t.history}</h2>
-        <button onClick={() => setIsSelectMode(!isSelectMode)} className="text-sm font-medium px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-600">{isSelectMode ? t.cancel : t.select}</button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-32">
-        {products.map(p => (
-          <div key={p.id} className="bg-white p-3 rounded-xl shadow-sm border flex gap-3">
-            {isSelectMode && (<div onClick={()=>{ const s = new Set(selectedIds); if(s.has(p.id)) s.delete(p.id); else s.add(p.id); setSelectedIds(s); }} className="flex items-center">{selectedIds.has(p.id) ? <CheckSquare className="text-indigo-600"/> : <Square className="text-slate-300"/>}</div>)}
-            <img src={p.photoUrl} className="w-20 h-20 rounded-lg object-cover border" />
-            <div className="flex-1 py-1"><div className="font-bold text-sm">{p.sku}</div><p className="text-xs text-slate-500">{p.nameEn || p.nameCn}</p><div className="font-bold text-indigo-600 text-sm mt-1">¥{p.priceRmb}</div></div>
-          </div>
-        ))}
-      </div>
-      {isSelectMode ? (
-        <div className="absolute bottom-24 w-full px-4 flex gap-3"><button onClick={()=>setShowExportMenu(true)} className="flex-1 bg-indigo-600 text-white rounded-xl h-12 flex items-center justify-center gap-2 font-bold shadow-lg"><Download size={20}/> {t.exportOptions}</button></div>
-      ) : (
-        <nav className="glass-nav absolute bottom-0 w-full pb-8 pt-4 px-12 flex justify-between items-center z-20">
-          <button onClick={() => setViewMode('folders')} className="flex flex-col items-center gap-1.5 text-slate-300"><Grid size={24} /><span className="text-[10px] font-bold">{t.myShops}</span></button>
-          <button className="flex flex-col items-center gap-1.5 text-indigo-600 relative"><div className="absolute -top-1 w-8 h-1 bg-indigo-600 rounded-full"></div><Database size={24} strokeWidth={2.5} /><span className="text-[10px] font-bold">{t.history}</span></button>
-        </nav>
-      )}
-    </div>
+    <MobileHistory
+      products={products}
+      selectedIds={selectedIds}
+      isSelectMode={isSelectMode}
+      showExportMenu={showExportMenu}
+      labels={t}
+      onToggleSelectMode={() => setIsSelectMode(!isSelectMode)}
+      onToggleProduct={(productId) => {
+        const s = new Set(selectedIds);
+        if (s.has(productId)) s.delete(productId);
+        else s.add(productId);
+        setSelectedIds(s);
+      }}
+      setShowExportMenu={setShowExportMenu}
+      onExport={handleExport}
+      onOpenFolders={() => setViewMode('folders')}
+    />
   );
 };
 
