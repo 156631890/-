@@ -28,7 +28,7 @@ describe('product metrics', () => {
     expect(calculateProductMetrics(baseProduct, { euroRmbRate: 7.8, usdRmbRate: 7.2, freightRateCbm: 150 })).toEqual({
       cbm: 0.12,
       freightPerPc: 0.9,
-      landedCostEuro: 2.842,
+      landedCostEuro: 2.838,
       priceStockUsd: 2,
     });
   });

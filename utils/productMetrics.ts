@@ -34,8 +34,7 @@ export function calculateProductMetrics(product: Partial<Product>, settings: Rat
   const baseCostEuro = (product.priceRmb || 0) > 0 && settings.euroRmbRate > 0
     ? Number(product.priceRmb) / settings.euroRmbRate
     : 0;
-  const roundedBaseCostEuro = round(baseCostEuro, 2);
-  const dutyCost = roundedBaseCostEuro * ((product.taxRate || 0) / 100);
+  const dutyCost = baseCostEuro * ((product.taxRate || 0) / 100);
   const priceStockUsd = (product.priceRmb || 0) > 0 && settings.usdRmbRate > 0
     ? Number(product.priceRmb) / settings.usdRmbRate
     : 0;
@@ -43,7 +42,7 @@ export function calculateProductMetrics(product: Partial<Product>, settings: Rat
   return {
     cbm: round(cbm, 4),
     freightPerPc: round(freightPerPc, 4),
-    landedCostEuro: round(roundedBaseCostEuro + freightPerPc + dutyCost, 3),
+    landedCostEuro: round(baseCostEuro + freightPerPc + dutyCost, 3),
     priceStockUsd: round(priceStockUsd, 3),
   };
 }
