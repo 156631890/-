@@ -203,7 +203,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       {showInvoiceModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col">
-            <div className="p-6 border-b flex justify-between items-center"><h2 className="text-xl font-bold flex items-center gap-2"><Settings size={20} className="text-indigo-600" /> {t.invoiceConfig}</h2><button onClick={() => setShowInvoiceModal(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20} /></button></div>
+            <div className="p-6 border-b flex justify-between items-center"><h2 className="text-xl font-bold flex items-center gap-2"><Settings size={20} className="text-indigo-600" /> {t.invoiceConfig}</h2><button onClick={() => setShowInvoiceModal(false)} className="p-2 hover:bg-slate-100 rounded-full" aria-label="Close invoice configuration" title="Close invoice configuration"><X size={20} /></button></div>
             <div className="p-8 space-y-6">
               <div><label className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t.companyName}</label><input className="w-full mt-1 border rounded-lg p-3" value={invoiceConfig.sellerName} onChange={e => updateInvoiceConfig({ sellerName: e.target.value })} /></div>
               <div className="flex gap-4"><button onClick={() => { setShowInvoiceModal(false); handleExportExcel('invoice'); }} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><Download size={20} /> Excel (.xlsx)</button><button onClick={() => { setShowInvoiceModal(false); handleExportPdf('invoice'); }} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><FileDown size={20} /> PDF (.pdf)</button></div>
@@ -231,7 +231,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <button onClick={() => handleExportExcel('packinglist')} className="px-2 py-1.5 text-[10px] font-bold text-green-600 hover:bg-green-50">PKL.xlsx</button>
                 <button onClick={() => handleExportPdf('packinglist')} className="px-2 py-1.5 text-[10px] font-bold text-red-600 hover:bg-red-50">PKL.pdf</button>
               </div>
-              <button onClick={() => setShowInvoiceModal(true)} className="p-2 hover:bg-white rounded-lg text-slate-600"><Printer size={18} /></button>
+              <button onClick={() => setShowInvoiceModal(true)} className="p-2 hover:bg-white rounded-lg text-slate-600" aria-label="Invoice export options" title="Invoice export options"><Printer size={18} /></button>
             </div>
           </div>
         </div>
