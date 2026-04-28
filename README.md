@@ -1,52 +1,57 @@
-# 义乌采购 AI 助手 (Yiwu Sourcing AI Assistant)
+# Yiwu Sourcing AI Assistant
 
-## 项目目标
+Yiwu Sourcing AI Assistant supports a mobile sourcing capture workflow and a desktop documentation/export workflow for sourcing teams.
 
-本项目旨在为义乌市场的采购代理和单证专员提供一个高效、智能的协作工具，解决从**市场选品**到**外贸单证制作**之间的数据断层问题。
+The mobile workflow helps sourcing agents create shop folders, capture or upload business card and product photos, and organize market findings while they are in the field. The desktop workflow helps documentation specialists search, enrich, review, and export the collected product data.
 
-主要目标包括：
-1.  **提升采集效率**：通过移动端优化的界面，让采购员在市场走访时能快速拍摄并记录产品核心信息（图片、价格、起订量等）。
-2.  **自动化数据处理**：利用 Google Gemini AI 自动完善产品描述、识别材质、并推荐准确的 HS 编码，减少人工录入错误。
-3.  **无缝导出**：一键生成带图片的专业 Excel 报价单和 PDF 产品目录，大幅缩短整理资料的时间。
-4.  **离线可用**：确保在市场信号不佳时，数据依然能安全保存在本地。
+## Main Features
 
-## 操作方法
+- Mobile shop folders for organizing supplier visits and product groups.
+- Photo capture and upload for business cards and product images.
+- Codex reverse-proxy AI product and business card analysis.
+- Local IndexedDB storage for offline-first field capture.
+- Desktop dashboard search and bulk enrichment.
+- Excel and PDF exports for quotations, packing lists, invoices, and master files.
 
-### 1. 角色选择
-打开应用后，根据您的工作场景选择角色：
-- **我是采购员 (Sourcing Agent)**：适合在手机上使用，界面简洁，侧重于快速拍照和录入。
-- **我是单证员 (Documentation Specialist)**：适合在电脑上使用，提供完整的数据表格和编辑功能。
+## Tech Stack
 
-### 2. 移动端采购录入 (采购员模式)
-- **拍照/上传**：点击相机图标拍摄产品照片。
-- **快速记录**：输入核心采购信息，如人民币价格、起订量 (MOQ)、包装方式等。
-- **自动保存**：所有数据会自动保存到本地数据库，无需担心丢失。
+- React 19
+- TypeScript
+- Vite
+- IndexedDB
+- ExcelJS
+- jsPDF
+- Codex reverse-proxy AI API
 
-### 3. 桌面端管理与导出 (单证员模式)
-- **数据看板**：在“仪表盘”中查看所有采购员录入的产品列表。
-- **AI 智能完善**：
-  - 点击“AI 完善”按钮，系统将根据图片自动生成英文产品名称、材质描述和推荐 HS 编码。
-- **编辑与审核**：点击任意产品卡片进行详细信息的修改和确认。
-- **导出报表**：
-  - **导出 Excel**：生成包含产品缩略图的标准外贸报价单。
-  - **导出 PDF**：生成图文并茂的产品目录 (Catalog)。
+## Environment
 
-## 技术栈
+Copy `.env.example` to `.env.local` and configure the Codex reverse-proxy API:
 
-- **前端框架**: React 19, TypeScript, Vite
-- **UI 样式**: Tailwind CSS
-- **人工智能**: Google Gemini API (@google/genai)
-- **本地存储**: IndexedDB (idb)
-- **文档处理**: ExcelJS (Excel导出), jsPDF (PDF导出)
+```bash
+VITE_AI_PROXY_BASE_URL=http://127.0.0.1:3001/v1
+VITE_AI_PROXY_API_KEY=
+VITE_AI_PROXY_MODE=openai-compatible
+VITE_AI_MODEL=gemini-2.5-flash
+VITE_AI_TIMEOUT_MS=60000
+```
 
-## 快速开始
+`VITE_AI_PROXY_MODE=openai-compatible` calls `{baseUrl}/chat/completions`.
+`VITE_AI_PROXY_MODE=gemini-compatible` calls `{baseUrl}/models/{model}:generateContent`.
 
-1.  克隆项目并安装依赖：
-    ```bash
-    npm install
-    ```
-2.  配置环境变量 (参考 `.env.example`)，填入 `GEMINI_API_KEY`。
-3.  启动开发服务器：
-    ```bash
-    npm run dev
-    ```
+## Verification
+
+```bash
+npm install
+npm test
+npx tsc --noEmit
+npm run build
+npm run dev
+```
+
+## Manual Checks
+
+- Navigate from landing to sourcing and dashboard modes.
+- Create a shop folder from a business card image.
+- Add product images to a folder and process selected images.
+- Search desktop products by SKU, name, supplier, shop, and HS code.
+- Export quotation, packing list, invoice, and master Excel/PDF files.
