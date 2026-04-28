@@ -5,6 +5,7 @@ import { translations } from '../utils/i18n';
 import { exportExcel } from '../services/export/excelExport';
 import { exportPdf } from '../services/export/pdfExport';
 import { ExportType } from '../services/export/exportTypes';
+import { isAiImageInputSupported } from '../services/ai/config';
 import { ProcessingOverlay } from './common/ProcessingOverlay';
 import { ShopFolderList } from './mobile/ShopFolderList';
 import { ShopFolderDetail } from './mobile/ShopFolderDetail';
@@ -57,6 +58,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
   const isMounted = useRef(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cardInputRef = useRef<HTMLInputElement>(null);
+  const canAnalyzeImages = isAiImageInputSupported();
 
   useEffect(() => {
     isMounted.current = true;
@@ -131,6 +133,24 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
         if (isMounted.current) setIsProcessing(false);
       }
     }
+  };
+
+  const handleCreateManualFolder = () => {
+    const newFolder: DraftFolder = {
+      id: Date.now().toString(),
+      name: "New Shop " + (folders.length + 1),
+      supplier: {
+        companyName: '',
+        contactPerson: '',
+        phone: '',
+        address: '',
+      },
+      images: [],
+      timestamp: Date.now()
+    };
+    setFolders(prev => [newFolder, ...prev]);
+    setActiveFolderId(newFolder.id);
+    setViewMode('folderDetail');
   };
 
   const handleAddPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -282,7 +302,9 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
             onLanguageChange?.(language);
           }
         }}
+        canAnalyzeImages={canAnalyzeImages}
         onCreateFolder={handleCreateFolder}
+        onCreateManualFolder={handleCreateManualFolder}
         onOpenFolder={(folderId) => { setActiveFolderId(folderId); setViewMode('folderDetail'); }}
         cardInputRef={cardInputRef}
         isDesktopMode={isDesktopMode}
@@ -306,6 +328,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
         onToggleImage={toggleImageSelection}
         onAddPhotos={handleAddPhotos}
         onProcessSelected={handleProcessSelected}
+        canAnalyzeImages={canAnalyzeImages}
       />
     );
   }

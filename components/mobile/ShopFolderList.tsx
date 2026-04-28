@@ -6,6 +6,7 @@ import { DraftFolder } from '../MobileEntry';
 interface ShopFolderListLabels {
   myShops: string;
   newShop: string;
+  manualEntry: string;
   scanCardToCreate: string;
   emptyFolders: string;
   photos: string;
@@ -17,7 +18,9 @@ interface ShopFolderListProps {
   currentLang: Language;
   labels: ShopFolderListLabels;
   onToggleLanguage: () => void;
+  canAnalyzeImages: boolean;
   onCreateFolder: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onCreateManualFolder: () => void;
   onOpenFolder: (folderId: string) => void;
   cardInputRef: React.RefObject<HTMLInputElement | null>;
   isDesktopMode?: boolean;
@@ -29,7 +32,9 @@ export const ShopFolderList: React.FC<ShopFolderListProps> = ({
   currentLang,
   labels,
   onToggleLanguage,
+  canAnalyzeImages,
   onCreateFolder,
+  onCreateManualFolder,
   onOpenFolder,
   cardInputRef,
   isDesktopMode,
@@ -51,17 +56,28 @@ export const ShopFolderList: React.FC<ShopFolderListProps> = ({
             </div>
             <div>
               <div className="font-bold">{labels.newShop}</div>
-              <div className="text-xs opacity-70">{labels.scanCardToCreate}</div>
+              <div className="text-xs opacity-70">{canAnalyzeImages ? labels.scanCardToCreate : labels.manualEntry}</div>
             </div>
           </div>
-          <label
-            className="bg-white text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
-            aria-label="Scan business card"
-            title="Scan business card"
-          >
-            <ScanLine size={20} />
-            <input type="file" accept="image/*" className="hidden" ref={cardInputRef} onChange={onCreateFolder} aria-label="Scan business card" />
-          </label>
+          {canAnalyzeImages ? (
+            <label
+              className="bg-white text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+              aria-label="Scan business card"
+              title="Scan business card"
+            >
+              <ScanLine size={20} />
+              <input type="file" accept="image/*" className="hidden" ref={cardInputRef} onChange={onCreateFolder} aria-label="Scan business card" />
+            </label>
+          ) : (
+            <button
+              onClick={onCreateManualFolder}
+              className="bg-white text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+              aria-label="Create folder manually"
+              title="Create folder manually"
+            >
+              <FolderPlus size={20} />
+            </button>
+          )}
         </div>
         {folders.length === 0 ? (
           <div className="text-center py-20 text-slate-400">

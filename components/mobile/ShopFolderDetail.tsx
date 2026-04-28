@@ -9,6 +9,7 @@ interface ShopFolderDetailLabels {
   selectAll: string;
   addPhotos: string;
   processSelected: string;
+  manualEntry: string;
 }
 
 interface ShopFolderDetailProps {
@@ -21,6 +22,7 @@ interface ShopFolderDetailProps {
   onToggleImage: (imageId: string) => void;
   onAddPhotos: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onProcessSelected: () => void;
+  canAnalyzeImages: boolean;
 }
 
 export const ShopFolderDetail: React.FC<ShopFolderDetailProps> = ({
@@ -32,7 +34,8 @@ export const ShopFolderDetail: React.FC<ShopFolderDetailProps> = ({
   onToggleSelectAll,
   onToggleImage,
   onAddPhotos,
-  onProcessSelected
+  onProcessSelected,
+  canAnalyzeImages
 }) => {
   const allInFolderIds = folder.images.map(img => img.id);
   const selectedInThisFolder = folder.images.filter(img => selectedImageIds.has(img.id));
@@ -80,10 +83,12 @@ export const ShopFolderDetail: React.FC<ShopFolderDetailProps> = ({
         <div className="absolute bottom-6 left-6 right-6 z-30 animate-in slide-in-from-bottom-4 duration-300">
           <button
             onClick={onProcessSelected}
-            className="w-full bg-slate-900 text-white rounded-2xl py-4 shadow-xl flex items-center justify-center gap-2 font-bold text-sm active:scale-95 transition-transform"
+            disabled={!canAnalyzeImages}
+            className={`w-full rounded-2xl py-4 shadow-xl flex items-center justify-center gap-2 font-bold text-sm transition-transform ${canAnalyzeImages ? 'bg-slate-900 text-white active:scale-95' : 'bg-slate-200 text-slate-500 cursor-not-allowed'}`}
+            title={canAnalyzeImages ? labels.processSelected : 'Image analysis requires a vision-capable proxy'}
           >
             <Sparkles size={18} className="text-indigo-300" />
-            {labels.processSelected} ({selectedInThisFolder.length})
+            {canAnalyzeImages ? labels.processSelected : labels.manualEntry} ({selectedInThisFolder.length})
           </button>
         </div>
       )}

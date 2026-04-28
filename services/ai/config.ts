@@ -47,3 +47,8 @@ export const getAiProxyConfig = (): AiProxyConfig => {
     timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 60000,
   };
 };
+
+export const isAiImageInputSupported = () => {
+  const inputModeValue = String(import.meta.env.VITE_AI_PROXY_INPUT_MODE ?? 'multimodal').trim();
+  return inputModeValue !== 'text-only';
+};
