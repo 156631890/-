@@ -8,10 +8,10 @@ const getEnv = () => {
 
 const getApiKey = () => {
   const env = getEnv();
-  const apiKey = env.VITE_GEMINI_API_KEY ?? env.VITE_AI_PROXY_API_KEY ?? env.GEMINI_API_KEY;
+  const apiKey = env.VITE_GEMINI_API_KEY ?? env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    throw new Error("Missing Gemini API key. Set VITE_GEMINI_API_KEY or VITE_AI_PROXY_API_KEY.");
+    throw new Error("Missing Gemini API key. Set VITE_GEMINI_API_KEY for legacy direct Gemini calls.");
   }
 
   return apiKey;
