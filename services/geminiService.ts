@@ -2,12 +2,23 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIEnrichmentResult, SupplierInfo } from "../types";
 
-/**
- * Initialize the Google GenAI client using the environment variable API_KEY.
- * Always follow the required initialization pattern: new GoogleGenAI({ apiKey: process.env.API_KEY })
- */
+const getEnv = () => {
+  return (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
+};
+
+const getApiKey = () => {
+  const env = getEnv();
+  const apiKey = env.VITE_GEMINI_API_KEY ?? env.VITE_AI_PROXY_API_KEY ?? env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("Missing Gemini API key. Set VITE_GEMINI_API_KEY or VITE_AI_PROXY_API_KEY.");
+  }
+
+  return apiKey;
+};
+
 const getClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  return new GoogleGenAI({ apiKey: getApiKey() });
 };
 
 // Helper to safely parse JSON from AI response, stripping Markdown code blocks if present
