@@ -106,7 +106,9 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
       setProcessingStatus({ current: 0, total: 1, text: String(t.analyzingCard) });
       try {
         const base64 = await processImageFile(e.target.files[0] as File);
+        if (!isMounted.current) return;
         const info = await analyzeBusinessCard(base64);
+        if (!isMounted.current) return;
         const newFolder: DraftFolder = {
           id: Date.now().toString(),
           name: info.companyName || "New Shop " + (folders.length + 1),
@@ -120,7 +122,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
       } catch (err) {
         console.error(err);
       } finally {
-        setIsProcessing(false);
+        if (isMounted.current) setIsProcessing(false);
       }
     }
   };
@@ -175,13 +177,19 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
   };
 
   const handleProcessSelected = async () => {
-    if (selectedImageIds.size === 0) return;
+    if (!activeFolderId) return;
+    const activeFolder = folders.find(f => f.id === activeFolderId);
+    if (!activeFolder) return;
+
+    const queue = activeFolder.images
+      .filter(img => selectedImageIds.has(img.id))
+      .map(img => ({ img, supplier: activeFolder.supplier }));
+    if (queue.length === 0) return;
+
     setIsProcessing(true);
-    let processed = 0; const total = selectedImageIds.size;
+    let processed = 0; const total = queue.length;
     let success = 0;
     let failed = 0;
-    const queue: { img: DraftImage, supplier: SupplierInfo }[] = [];
-    folders.forEach(f => { f.images.forEach(img => { if (selectedImageIds.has(img.id)) queue.push({ img, supplier: f.supplier }); }); });
     
     try {
       for (const item of queue) {
@@ -189,6 +197,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
         setProcessingStatus({ current: processed + 1, total, text: `Analyzing item ${processed + 1}/${total}` });
         try {
           const aiData = await analyzeImage(item.img.url);
+          if (!isMounted.current) return;
           const newProduct: Product = {
             id: Date.now().toString() + "_" + Math.random().toString(36).substr(2, 5),
             sku: `YW-${Math.floor(Math.random() * 90000) + 10000}`,
@@ -220,7 +229,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
         processed++;
       }
     } finally {
-      setIsProcessing(false);
+      if (isMounted.current) setIsProcessing(false);
     }
     if (isMounted.current) { alert(`Batch complete. Success: ${success}. Failed: ${failed}.`); setViewMode('history'); }
   };

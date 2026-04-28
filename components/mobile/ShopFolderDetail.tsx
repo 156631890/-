@@ -76,14 +76,14 @@ export const ShopFolderDetail: React.FC<ShopFolderDetailProps> = ({
         </div>
       </div>
 
-      {selectedImageIds.size > 0 && (
+      {selectedInThisFolder.length > 0 && (
         <div className="absolute bottom-6 left-6 right-6 z-30 animate-in slide-in-from-bottom-4 duration-300">
           <button
             onClick={onProcessSelected}
             className="w-full bg-slate-900 text-white rounded-2xl py-4 shadow-xl flex items-center justify-center gap-2 font-bold text-sm active:scale-95 transition-transform"
           >
             <Sparkles size={18} className="text-indigo-300" />
-            {labels.processSelected} ({selectedImageIds.size})
+            {labels.processSelected} ({selectedInThisFolder.length})
           </button>
         </div>
       )}

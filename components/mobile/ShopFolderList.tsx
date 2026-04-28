@@ -54,9 +54,13 @@ export const ShopFolderList: React.FC<ShopFolderListProps> = ({
               <div className="text-xs opacity-70">{labels.scanCardToCreate}</div>
             </div>
           </div>
-          <label className="bg-white text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform">
+          <label
+            className="bg-white text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+            aria-label="Scan business card"
+            title="Scan business card"
+          >
             <ScanLine size={20} />
-            <input type="file" accept="image/*" className="hidden" ref={cardInputRef} onChange={onCreateFolder} />
+            <input type="file" accept="image/*" className="hidden" ref={cardInputRef} onChange={onCreateFolder} aria-label="Scan business card" />
           </label>
         </div>
         {folders.length === 0 ? (
