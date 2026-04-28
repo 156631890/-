@@ -5,17 +5,70 @@ import { BusinessCardResult, ImageAnalysisResult } from './ai/types';
 
 const normalizeNumber = (value: unknown) => Number(value) || 0;
 
+const normalizeText = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+
 const toImageDataUrl = (base64Image: string) =>
   base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}`;
 
+const normalizeBusinessCard = (result: BusinessCardResult): SupplierInfo => {
+  const supplier = {
+    companyName: normalizeText(result.companyName),
+    contactPerson: normalizeText(result.contactPerson),
+    phone: normalizeText(result.phone),
+    address: normalizeText(result.address),
+    email: normalizeText(result.email) || undefined,
+  };
+
+  if (!supplier.companyName && !supplier.contactPerson && !supplier.phone && !supplier.address && !supplier.email) {
+    throw new Error('AI business card response did not include supplier information.');
+  }
+
+  return supplier;
+};
+
+const normalizeImageAnalysis = (result: ImageAnalysisResult): ImageAnalysisResult => {
+  const nameCn = normalizeText(result.nameCn);
+  const nameEn = normalizeText(result.nameEn);
+  const materialEn = normalizeText(result.materialEn);
+  const hsCode = normalizeText(result.hsCode);
+  const normalized = {
+    nameCn: nameCn || nameEn,
+    priceRmb: normalizeNumber(result.priceRmb),
+    moq: normalizeNumber(result.moq),
+    nameEn: nameEn || nameCn,
+    materialEn,
+    boxLength: normalizeNumber(result.boxLength),
+    boxWidth: normalizeNumber(result.boxWidth),
+    boxHeight: normalizeNumber(result.boxHeight),
+    pcsPerBox: normalizeNumber(result.pcsPerBox),
+    hsCode,
+  };
+  const hasProductDetail =
+    normalized.priceRmb > 0 ||
+    normalized.moq > 0 ||
+    normalized.boxLength > 0 ||
+    normalized.boxWidth > 0 ||
+    normalized.boxHeight > 0 ||
+    normalized.pcsPerBox > 0 ||
+    Boolean(normalized.materialEn) ||
+    Boolean(normalized.hsCode);
+
+  if (!normalized.nameCn || !hasProductDetail) {
+    throw new Error('AI product image response did not include enough product information.');
+  }
+
+  return normalized;
+};
+
 export const analyzeBusinessCard = async (base64Image: string): Promise<SupplierInfo> => {
   try {
-    return await requestAiJson<BusinessCardResult>({
+    const result = await requestAiJson<BusinessCardResult>({
       parts: [
         { type: 'image', dataUrl: toImageDataUrl(base64Image) },
         { type: 'text', text: businessCardPrompt },
       ],
     });
+    return normalizeBusinessCard(result);
   } catch (error) {
     console.error('Business Card Analysis failed:', error);
     throw error;
@@ -42,18 +95,7 @@ export const analyzeImage = async (base64Image: string): Promise<ImageAnalysisRe
       ],
     });
 
-    return {
-      nameCn: result.nameCn || 'Unknown Product',
-      priceRmb: normalizeNumber(result.priceRmb),
-      moq: normalizeNumber(result.moq),
-      nameEn: result.nameEn || 'Unknown Product',
-      materialEn: result.materialEn || 'General',
-      boxLength: normalizeNumber(result.boxLength),
-      boxWidth: normalizeNumber(result.boxWidth),
-      boxHeight: normalizeNumber(result.boxHeight),
-      pcsPerBox: normalizeNumber(result.pcsPerBox),
-      hsCode: result.hsCode || '',
-    };
+    return normalizeImageAnalysis(result);
   } catch (error) {
     console.error('Image Analysis failed:', error);
     throw error;

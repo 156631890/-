@@ -41,7 +41,7 @@ Modify:
 
 - `package.json`: add test scripts and npm export dependencies.
 - `index.html`: remove CDN import map and export-library globals once dependencies are bundled.
-- `vite.config.ts`: switch from `process.env.API_KEY` defines to `import.meta.env` usage.
+- `vite.config.ts`: remove legacy frontend provider-key defines and use `import.meta.env` proxy configuration.
 - `README.md`: document setup, Windows checkout note, proxy config, and verification commands.
 - `services/geminiService.ts`: become a compatibility wrapper over `services/ai`.
 - `services/db.ts`: add settings store and transaction-complete semantics.
@@ -108,7 +108,6 @@ Replace the `scripts`, `dependencies`, and `devDependencies` blocks in `package.
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@google/genai": "^1.32.0",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "jspdf": "^2.5.2",
@@ -728,12 +727,15 @@ const isMode = (value: string): value is AiProxyMode =>
 
 export function getAiProxyConfig(): AiProxyConfig {
   const baseUrl = import.meta.env.VITE_AI_PROXY_BASE_URL?.trim();
-  const modeRaw = import.meta.env.VITE_AI_PROXY_MODE?.trim() || 'openai-compatible';
+  const modeRaw = import.meta.env.VITE_AI_PROXY_MODE?.trim();
   const model = import.meta.env.VITE_AI_MODEL?.trim();
   const timeoutMs = Number(import.meta.env.VITE_AI_TIMEOUT_MS || 60000);
 
   if (!baseUrl) {
     throw new Error('Missing VITE_AI_PROXY_BASE_URL. Configure the Codex reverse-proxy API URL.');
+  }
+  if (!modeRaw) {
+    throw new Error('Missing VITE_AI_PROXY_MODE. Set it to openai-compatible or gemini-compatible.');
   }
   if (!isMode(modeRaw)) {
     throw new Error('VITE_AI_PROXY_MODE must be openai-compatible or gemini-compatible.');

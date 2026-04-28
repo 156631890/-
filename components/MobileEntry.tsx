@@ -111,7 +111,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
         if (!isMounted.current) return;
         const newFolder: DraftFolder = {
           id: Date.now().toString(),
-          name: info.companyName || "New Shop " + (folders.length + 1),
+          name: info.companyName || info.contactPerson || info.phone || "New Shop " + (folders.length + 1),
           supplier: info,
           images: [],
           timestamp: Date.now()

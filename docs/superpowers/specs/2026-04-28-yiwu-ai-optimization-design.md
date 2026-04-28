@@ -49,7 +49,7 @@ Add explicit Vite environment variables:
 - `VITE_AI_MODEL`: default model name.
 - `VITE_AI_TIMEOUT_MS`: optional request timeout.
 
-Add `.env.example` with these values documented. The implementation should not hard-code `process.env.API_KEY` in frontend code.
+Add `.env.example` with these values documented. The implementation should not hard-code a provider API key in frontend code.
 
 ## AI Client Design
 
