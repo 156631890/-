@@ -8,6 +8,46 @@ export enum ProcessingStatus {
 
 export type Language = 'en' | 'zh' | 'es';
 
+export interface AppSettings {
+  id: 'default';
+  language: Language;
+  euroRmbRate: number;
+  usdRmbRate: number;
+  freightRateCbm: number;
+  invoiceConfig: {
+    sellerName: string;
+    sellerAddress: string;
+    sellerPhone: string;
+    sellerEmail: string;
+    buyerInfo: string;
+    invoiceNo: string;
+    date: string;
+    sailing: string;
+    containerNo: string;
+    sealNo: string;
+  };
+}
+
+export const DEFAULT_APP_SETTINGS: AppSettings = {
+  id: 'default',
+  language: 'en',
+  euroRmbRate: 7.8,
+  usdRmbRate: 7.2,
+  freightRateCbm: 150,
+  invoiceConfig: {
+    sellerName: "YiWu Edas Import and Export Co., Ltd",
+    sellerAddress: "Room 301, 3rd Floor, NO. 16, DaShi Road, FoTang Town, YiWu City, Zhejiang, China",
+    sellerPhone: "86-579-85569925",
+    sellerEmail: "info@yiwudiyasi.com",
+    buyerInfo: "BERNARDI GROUP PTY LTD\nSHOP 4, 159-173 LACHLAN STREET\nFORBES NSW 2871\nAUSTRALIA",
+    invoiceNo: "20250712001",
+    date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }),
+    sailing: "ALS CLIVIA/001S",
+    containerNo: "CMAU9593405",
+    sealNo: "R6953832"
+  }
+};
+
 export interface SupplierInfo {
   companyName: string;
   contactPerson: string;

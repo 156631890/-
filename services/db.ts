@@ -1,8 +1,17 @@
-import { Product } from '../types';
+import { AppSettings, DEFAULT_APP_SETTINGS, Product } from '../types';
 
 const DB_NAME = 'YiwuSourcingDB';
-const STORE_NAME = 'products';
-const DB_VERSION = 1;
+const PRODUCT_STORE = 'products';
+const SETTINGS_STORE = 'settings';
+const DB_VERSION = 2;
+
+const waitForTransaction = (transaction: IDBTransaction): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+};
 
 // Open or create the database
 const getDB = (): Promise<IDBDatabase> => {
@@ -20,8 +29,11 @@ const getDB = (): Promise<IDBDatabase> => {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(PRODUCT_STORE)) {
+        db.createObjectStore(PRODUCT_STORE, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
+        db.createObjectStore(SETTINGS_STORE, { keyPath: 'id' });
       }
     };
   });
@@ -32,8 +44,8 @@ export const dbService = {
   getAll: async (): Promise<Product[]> => {
     const db = await getDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
+      const transaction = db.transaction(PRODUCT_STORE, 'readonly');
+      const store = transaction.objectStore(PRODUCT_STORE);
       const request = store.getAll();
 
       request.onsuccess = () => resolve(request.result || []);
@@ -44,55 +56,50 @@ export const dbService = {
   // Add or Update a product (put handles both)
   save: async (product: Product): Promise<void> => {
     const db = await getDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(product);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    const transaction = db.transaction(PRODUCT_STORE, 'readwrite');
+    const store = transaction.objectStore(PRODUCT_STORE);
+    store.put(product);
+    await waitForTransaction(transaction);
   },
 
   // Delete a product by ID
   delete: async (id: string): Promise<void> => {
     const db = await getDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.delete(id);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    const transaction = db.transaction(PRODUCT_STORE, 'readwrite');
+    const store = transaction.objectStore(PRODUCT_STORE);
+    store.delete(id);
+    await waitForTransaction(transaction);
   },
   
   // Bulk delete
   deleteMany: async (ids: string[]): Promise<void> => {
+    if (ids.length === 0) return;
+    const db = await getDB();
+    const transaction = db.transaction(PRODUCT_STORE, 'readwrite');
+    const store = transaction.objectStore(PRODUCT_STORE);
+    ids.forEach(id => store.delete(id));
+    await waitForTransaction(transaction);
+  },
+
+  getSettings: async (): Promise<AppSettings> => {
     const db = await getDB();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      
-      let completed = 0;
-      let errors = false;
-      
-      if (ids.length === 0) return resolve();
+      const transaction = db.transaction(SETTINGS_STORE, 'readonly');
+      const store = transaction.objectStore(SETTINGS_STORE);
+      const request = store.get(DEFAULT_APP_SETTINGS.id);
 
-      ids.forEach(id => {
-        const req = store.delete(id);
-        req.onsuccess = () => {
-          completed++;
-          if (completed === ids.length) resolve();
-        };
-        req.onerror = () => {
-          errors = true;
-          console.error(`Failed to delete ${id}`);
-        };
-      });
-      
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
+      request.onsuccess = () => {
+        resolve(request.result ? { ...DEFAULT_APP_SETTINGS, ...request.result } : DEFAULT_APP_SETTINGS);
+      };
+      request.onerror = () => reject(request.error);
     });
+  },
+
+  saveSettings: async (settings: AppSettings): Promise<void> => {
+    const db = await getDB();
+    const transaction = db.transaction(SETTINGS_STORE, 'readwrite');
+    const store = transaction.objectStore(SETTINGS_STORE);
+    store.put(settings);
+    await waitForTransaction(transaction);
   }
 };

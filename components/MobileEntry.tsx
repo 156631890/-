@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Save, Box, Home, Plus, Layers, Loader2, ImagePlus, ChevronRight, Package, Tag, Store, DollarSign, Zap, X, ArrowLeft, CheckSquare, Square, Trash2, Sparkles, Download, RefreshCw, FileText, Database, Printer, Contact, UserCircle, Briefcase, Globe, ScanLine, Edit2, Folder, FolderPlus, ArrowUpRight, Grid, Image as ImageIcon, Eraser, FileDown } from 'lucide-react';
-import { Product, ProcessingStatus, SupplierInfo, Language } from '../types';
+import { AppSettings, DEFAULT_APP_SETTINGS, Product, ProcessingStatus, SupplierInfo, Language } from '../types';
 import { analyzeImage, enrichProductData, analyzeBusinessCard } from '../services/geminiService';
 import { translations } from '../utils/i18n';
 
@@ -30,13 +30,15 @@ interface MobileEntryProps {
   isDesktopMode?: boolean;
   onClose?: () => void;
   products?: Product[];
+  settings?: AppSettings;
+  onSettingsChange?: (settings: AppSettings) => void;
   currentLang?: Language;
   onLanguageChange?: (lang: Language) => void;
 }
 
 const MobileEntry: React.FC<MobileEntryProps> = ({ 
   onSave, onUpdateProduct, onDeleteProduct, isDesktopMode, onClose, products = [], 
-  currentLang = 'en', onLanguageChange 
+  settings = DEFAULT_APP_SETTINGS, onSettingsChange, currentLang = settings.language, onLanguageChange
 }) => {
   const t = translations[currentLang];
   
@@ -63,9 +65,8 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
   // --- HELPERS ---
 
   const calculateMetrics = (p: Partial<Product>) => {
-    const rate = 7.8; 
     const cbm = (p.boxLength && p.boxWidth && p.boxHeight) ? (p.boxLength * p.boxWidth * p.boxHeight) / 1000000 : 0;
-    const priceStockUsd = (p.priceRmb || 0) > 0 ? (p.priceRmb || 0) / 7.2 : 0;
+    const priceStockUsd = (p.priceRmb || 0) > 0 ? (p.priceRmb || 0) / settings.usdRmbRate : 0;
     return { cbm: Number(cbm.toFixed(4)), priceStockUsd: Number(priceStockUsd.toFixed(3)) };
   };
 
@@ -277,7 +278,14 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
       <div className="flex flex-col h-full bg-slate-50 relative">
         <div className="bg-white border-b px-6 py-4 flex justify-between items-center sticky top-0 z-20">
           <h1 className="text-xl font-bold">{t.myShops}</h1>
-          <button onClick={() => { if(currentLang==='en') onLanguageChange?.('zh'); else onLanguageChange?.('en'); }} className="text-xs font-bold px-2.5 py-1.5 bg-slate-50 rounded-lg border">{currentLang.toUpperCase()}</button>
+          <button onClick={() => {
+            const language = currentLang === 'en' ? 'zh' : 'en';
+            if (onSettingsChange) {
+              onSettingsChange({ ...settings, language });
+            } else {
+              onLanguageChange?.(language);
+            }
+          }} className="text-xs font-bold px-2.5 py-1.5 bg-slate-50 rounded-lg border">{currentLang.toUpperCase()}</button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
           <div className="bg-indigo-600 rounded-2xl p-4 flex items-center justify-between shadow-lg text-white">

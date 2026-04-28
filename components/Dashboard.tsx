@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Product, ProcessingStatus, Language } from '../types';
+import { AppSettings, Product, ProcessingStatus, Language } from '../types';
 import { enrichProductData } from '../services/geminiService';
 import { Sparkles, RefreshCw, Settings, Database, Edit, Save as SaveIcon, X, Trash2, CheckSquare, Square, Printer, Search, Download, Package, Box as BoxIcon, Plus, UploadCloud, ZoomIn, FileText, Globe, Home, FileDown, ExternalLink } from 'lucide-react';
 import MobileEntry from './MobileEntry';
@@ -16,27 +16,16 @@ interface DashboardProps {
   onUpdateProduct: (product: Product) => void;
   onDeleteProduct?: (ids: string[]) => void;
   onAddProduct: (product: Product) => void;
+  settings: AppSettings;
+  onSettingsChange: (settings: AppSettings) => void;
   currentLang?: Language;
   onLanguageChange?: (lang: Language) => void;
   onHome?: () => void;
 }
 
-const DEFAULT_INVOICE_CONFIG = {
-  sellerName: "YiWu Edas Import and Export Co., Ltd",
-  sellerAddress: "Room 301, 3rd Floor, NO. 16, DaShi Road, FoTang Town, YiWu City, Zhejiang, China",
-  sellerPhone: "86-579-85569925",
-  sellerEmail: "info@yiwudiyasi.com",
-  buyerInfo: "BERNARDI GROUP PTY LTD\nSHOP 4, 159-173 LACHLAN STREET\nFORBES NSW 2871\nAUSTRALIA",
-  invoiceNo: "20250712001",
-  date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }),
-  sailing: "ALS CLIVIA/001S",
-  containerNo: "CMAU9593405",
-  sealNo: "R6953832"
-};
-
 const Dashboard: React.FC<DashboardProps> = ({ 
   products, onUpdateProduct, onDeleteProduct, onAddProduct, 
-  currentLang = 'en', onLanguageChange, onHome 
+  settings, onSettingsChange, currentLang = settings.language, onLanguageChange, onHome
 }) => {
   const t = translations[currentLang];
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -47,10 +36,21 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [invoiceConfig, setInvoiceConfig] = useState(DEFAULT_INVOICE_CONFIG);
-  const [euroRmbRate, setEuroRmbRate] = useState<number>(7.8);
-  const [freightRateCbm, setFreightRateCbm] = useState<number>(150);
-  const [usdRmbRate, setUsdRmbRate] = useState<number>(7.2);
+  const invoiceConfig = settings.invoiceConfig;
+  const euroRmbRate = settings.euroRmbRate;
+  const freightRateCbm = settings.freightRateCbm;
+  const usdRmbRate = settings.usdRmbRate;
+
+  const updateSettings = (patch: Partial<AppSettings>) => {
+    onSettingsChange({ ...settings, ...patch });
+  };
+
+  const updateInvoiceConfig = (patch: Partial<AppSettings['invoiceConfig']>) => {
+    onSettingsChange({
+      ...settings,
+      invoiceConfig: { ...settings.invoiceConfig, ...patch }
+    });
+  };
 
   const calculateMetrics = (p: Product) => {
     const rate = euroRmbRate;
@@ -221,7 +221,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       {showUploadModal && (
         <div className="fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg h-[80vh] overflow-hidden flex flex-col">
-             <MobileEntry onSave={onAddProduct} isDesktopMode={true} onClose={() => setShowUploadModal(false)} currentLang={currentLang} onLanguageChange={onLanguageChange} products={products} onUpdateProduct={onUpdateProduct} onDeleteProduct={onDeleteProduct} />
+             <MobileEntry onSave={onAddProduct} isDesktopMode={true} onClose={() => setShowUploadModal(false)} settings={settings} onSettingsChange={onSettingsChange} currentLang={currentLang} onLanguageChange={onLanguageChange} products={products} onUpdateProduct={onUpdateProduct} onDeleteProduct={onDeleteProduct} />
            </div>
         </div>
       )}
@@ -235,7 +235,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col">
             <div className="p-6 border-b flex justify-between items-center"><h2 className="text-xl font-bold flex items-center gap-2"><Settings size={20} className="text-indigo-600"/> {t.invoiceConfig}</h2><button onClick={() => setShowInvoiceModal(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20}/></button></div>
             <div className="p-8 space-y-6">
-               <div><label className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t.companyName}</label><input className="w-full mt-1 border rounded-lg p-3" value={invoiceConfig.sellerName} onChange={e => setInvoiceConfig({...invoiceConfig, sellerName: e.target.value})} /></div>
+               <div><label className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t.companyName}</label><input className="w-full mt-1 border rounded-lg p-3" value={invoiceConfig.sellerName} onChange={e => updateInvoiceConfig({ sellerName: e.target.value })} /></div>
                <div className="flex gap-4"><button onClick={() => { setShowInvoiceModal(false); generateExcel('invoice'); }} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><Download size={20} /> Excel (.xlsx)</button><button onClick={() => { setShowInvoiceModal(false); generatePDF('invoice'); }} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><FileDown size={20} /> PDF (.pdf)</button></div>
             </div>
           </div>
@@ -275,9 +275,9 @@ const Dashboard: React.FC<DashboardProps> = ({
              </div>
            ) : (
              <div className="flex gap-6 text-sm text-slate-500 w-full overflow-x-auto no-scrollbar">
-                <div className="flex items-center gap-2"><span>EUR:</span><input type="number" value={euroRmbRate} onChange={e=>setEuroRmbRate(Number(e.target.value))} className="w-12 border rounded text-center"/></div>
-                <div className="flex items-center gap-2"><span>USD:</span><input type="number" value={usdRmbRate} onChange={e=>setUsdRmbRate(Number(e.target.value))} className="w-12 border rounded text-center"/></div>
-                <div className="flex items-center gap-2"><span>FRT:</span><input type="number" value={freightRateCbm} onChange={e=>setFreightRateCbm(Number(e.target.value))} className="w-12 border rounded text-center"/></div>
+                <div className="flex items-center gap-2"><span>EUR:</span><input type="number" value={euroRmbRate} onChange={e=>updateSettings({ euroRmbRate: Number(e.target.value) })} className="w-12 border rounded text-center"/></div>
+                <div className="flex items-center gap-2"><span>USD:</span><input type="number" value={usdRmbRate} onChange={e=>updateSettings({ usdRmbRate: Number(e.target.value) })} className="w-12 border rounded text-center"/></div>
+                <div className="flex items-center gap-2"><span>FRT:</span><input type="number" value={freightRateCbm} onChange={e=>updateSettings({ freightRateCbm: Number(e.target.value) })} className="w-12 border rounded text-center"/></div>
              </div>
            )}
            <div className="relative w-full md:w-auto"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input type="text" placeholder={t.searchPlaceholder} className="pl-9 pr-4 py-2 text-sm border rounded-full w-full md:w-64" /></div>
