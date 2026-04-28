@@ -13,8 +13,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     define: {
-      'import.meta.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY ?? ''),
-      'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(legacyGeminiApiKey),
+      __LEGACY_GEMINI_API_KEY__: JSON.stringify(legacyGeminiApiKey),
     },
     resolve: {
       alias: {

@@ -2,19 +2,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIEnrichmentResult, SupplierInfo } from "../types";
 
-const getEnv = () => {
-  return (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
-};
+declare const __LEGACY_GEMINI_API_KEY__: string;
 
+// Temporary direct-Gemini compatibility until the Task 3 proxy client replaces this path.
 const getApiKey = () => {
-  const env = getEnv();
-  const apiKey = env.VITE_GEMINI_API_KEY ?? env.GEMINI_API_KEY;
-
-  if (!apiKey) {
+  if (!__LEGACY_GEMINI_API_KEY__) {
     throw new Error("Missing Gemini API key. Set VITE_GEMINI_API_KEY for legacy direct Gemini calls.");
   }
 
-  return apiKey;
+  return __LEGACY_GEMINI_API_KEY__;
 };
 
 const getClient = () => {
