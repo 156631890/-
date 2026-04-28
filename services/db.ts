@@ -13,6 +13,35 @@ const waitForTransaction = (transaction: IDBTransaction): Promise<void> => {
   });
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null;
+};
+
+const normalizePositiveNumber = (value: unknown, fallback: number): number => {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
+};
+
+const normalizeSettings = (raw: unknown): AppSettings => {
+  if (!isRecord(raw)) {
+    return DEFAULT_APP_SETTINGS;
+  }
+
+  const invoiceConfig = isRecord(raw.invoiceConfig)
+    ? { ...DEFAULT_APP_SETTINGS.invoiceConfig, ...raw.invoiceConfig }
+    : DEFAULT_APP_SETTINGS.invoiceConfig;
+
+  return {
+    id: 'default',
+    language: raw.language === 'en' || raw.language === 'zh' || raw.language === 'es'
+      ? raw.language
+      : DEFAULT_APP_SETTINGS.language,
+    euroRmbRate: normalizePositiveNumber(raw.euroRmbRate, DEFAULT_APP_SETTINGS.euroRmbRate),
+    usdRmbRate: normalizePositiveNumber(raw.usdRmbRate, DEFAULT_APP_SETTINGS.usdRmbRate),
+    freightRateCbm: normalizePositiveNumber(raw.freightRateCbm, DEFAULT_APP_SETTINGS.freightRateCbm),
+    invoiceConfig
+  };
+};
+
 // Open or create the database
 const getDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
@@ -25,6 +54,10 @@ const getDB = (): Promise<IDBDatabase> => {
 
     request.onsuccess = () => {
       resolve(request.result);
+    };
+
+    request.onblocked = () => {
+      reject(new Error('Database upgrade is blocked by another open tab.'));
     };
 
     request.onupgradeneeded = (event) => {
@@ -89,7 +122,7 @@ export const dbService = {
       const request = store.get(DEFAULT_APP_SETTINGS.id);
 
       request.onsuccess = () => {
-        resolve(request.result ? { ...DEFAULT_APP_SETTINGS, ...request.result } : DEFAULT_APP_SETTINGS);
+        resolve(normalizeSettings(request.result));
       };
       request.onerror = () => reject(request.error);
     });
@@ -99,7 +132,7 @@ export const dbService = {
     const db = await getDB();
     const transaction = db.transaction(SETTINGS_STORE, 'readwrite');
     const store = transaction.objectStore(SETTINGS_STORE);
-    store.put(settings);
+    store.put(normalizeSettings(settings));
     await waitForTransaction(transaction);
   }
 };

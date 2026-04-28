@@ -7,6 +7,8 @@ import { dbService } from './services/db';
 
 type ViewState = 'landing' | 'sourcing' | 'dashboard';
 
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('landing');
   const [products, setProducts] = useState<Product[]>([]);
@@ -40,7 +42,7 @@ export default function App() {
     try {
       await dbService.save(newProduct);
     } catch (error) {
-      setProducts(prev => prev.filter(product => product.id !== newProduct.id));
+      setProducts(prev => prev.filter(product => product.id !== newProduct.id || !sameJson(product, newProduct)));
       console.error("Failed to save product:", error);
       alert("Error saving data. Please check storage space.");
     }
@@ -53,7 +55,9 @@ export default function App() {
       await dbService.save(updatedProduct);
     } catch (error) {
       if (previousProduct) {
-        setProducts(prev => prev.map(product => product.id === updatedProduct.id ? previousProduct : product));
+        setProducts(prev => prev.map(product =>
+          product.id === updatedProduct.id && sameJson(product, updatedProduct) ? previousProduct : product
+        ));
       }
       console.error("Failed to update product:", error);
       alert("Error updating data. Please check storage space.");
@@ -66,7 +70,10 @@ export default function App() {
     try {
       await dbService.deleteMany(ids);
     } catch (error) {
-      setProducts(prev => [...deletedProducts, ...prev].sort((a, b) => b.timestamp - a.timestamp));
+      setProducts(prev => [
+        ...deletedProducts.filter(deletedProduct => !prev.some(product => product.id === deletedProduct.id)),
+        ...prev
+      ].sort((a, b) => b.timestamp - a.timestamp));
       console.error("Failed to delete products:", error);
       alert("Error deleting data. Please check storage space.");
     }
@@ -78,7 +85,7 @@ export default function App() {
     try {
       await dbService.saveSettings(nextSettings);
     } catch (error) {
-      setSettings(previousSettings);
+      setSettings(current => sameJson(current, nextSettings) ? previousSettings : current);
       console.error("Failed to save settings:", error);
       alert("Error saving settings. Please check storage space.");
     }
