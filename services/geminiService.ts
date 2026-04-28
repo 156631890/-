@@ -43,17 +43,15 @@ const normalizeImageAnalysis = (result: ImageAnalysisResult): ImageAnalysisResul
     pcsPerBox: normalizeNumber(result.pcsPerBox),
     hsCode,
   };
-  const hasProductDetail =
-    normalized.priceRmb > 0 ||
-    normalized.moq > 0 ||
-    normalized.boxLength > 0 ||
-    normalized.boxWidth > 0 ||
-    normalized.boxHeight > 0 ||
-    normalized.pcsPerBox > 0 ||
-    Boolean(normalized.materialEn) ||
-    Boolean(normalized.hsCode);
+  const hasPricing = normalized.priceRmb > 0;
+  const hasOrderQuantity = normalized.moq > 0;
+  const hasPacking =
+    normalized.boxLength > 0 &&
+    normalized.boxWidth > 0 &&
+    normalized.boxHeight > 0 &&
+    normalized.pcsPerBox > 0;
 
-  if (!normalized.nameCn || !hasProductDetail) {
+  if (!normalized.nameCn || !hasPricing || !hasOrderQuantity || !hasPacking) {
     throw new Error('AI product image response did not include enough product information.');
   }
 

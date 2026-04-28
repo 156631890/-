@@ -162,10 +162,7 @@ In `index.html`, remove these script blocks:
 
 ```html
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- legacy export-library CDN scripts -->
 <script type="importmap">
 ...
 </script>
@@ -889,7 +886,7 @@ export const analyzeBusinessCard = async (base64Image: string): Promise<Supplier
     });
   } catch (error) {
     console.error('Business card analysis failed:', error);
-    return { companyName: '', contactPerson: '', phone: '', address: '' };
+    throw error;
   }
 };
 
@@ -908,32 +905,10 @@ export const analyzeImage = async (base64Image: string): Promise<ImageAnalysisRe
       ],
     });
 
-    return {
-      nameCn: result.nameCn || '待识别商品',
-      nameEn: result.nameEn || 'Unknown Product',
-      materialEn: result.materialEn || 'General',
-      hsCode: result.hsCode || '',
-      priceRmb: normalizeNumber(result.priceRmb),
-      moq: normalizeNumber(result.moq),
-      boxLength: normalizeNumber(result.boxLength),
-      boxWidth: normalizeNumber(result.boxWidth),
-      boxHeight: normalizeNumber(result.boxHeight),
-      pcsPerBox: normalizeNumber(result.pcsPerBox),
-    };
+    return normalizeImageAnalysis(result);
   } catch (error) {
     console.error('Image analysis failed:', error);
-    return {
-      nameCn: '识别失败 (Manual Entry)',
-      priceRmb: 0,
-      moq: 0,
-      nameEn: '',
-      materialEn: '',
-      hsCode: '',
-      boxLength: 0,
-      boxWidth: 0,
-      boxHeight: 0,
-      pcsPerBox: 0,
-    };
+    throw error;
   }
 };
 ```

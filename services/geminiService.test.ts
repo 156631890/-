@@ -70,6 +70,44 @@ describe('geminiService proxy failures', () => {
     );
   });
 
+  it('rejects named product JSON without pricing, MOQ, and packing numbers', async () => {
+    requestAiJsonMock.mockResolvedValueOnce({
+      nameCn: '玩具车',
+      nameEn: 'Toy Car',
+      materialEn: 'Plastic',
+      hsCode: '950300',
+      priceRmb: 0,
+      moq: 0,
+      boxLength: 0,
+      boxWidth: 0,
+      boxHeight: 0,
+      pcsPerBox: 0,
+    });
+
+    await expect(analyzeImage('data:image/jpeg;base64,abc')).rejects.toThrow(
+      'AI product image response did not include enough product information',
+    );
+  });
+
+  it('rejects product JSON without complete packing numbers', async () => {
+    requestAiJsonMock.mockResolvedValueOnce({
+      nameCn: '玩具车',
+      nameEn: 'Toy Car',
+      materialEn: 'Plastic',
+      hsCode: '950300',
+      priceRmb: 12.5,
+      moq: 24,
+      boxLength: 60,
+      boxWidth: 40,
+      boxHeight: 0,
+      pcsPerBox: 12,
+    });
+
+    await expect(analyzeImage('data:image/jpeg;base64,abc')).rejects.toThrow(
+      'AI product image response did not include enough product information',
+    );
+  });
+
   it('normalizes valid product JSON without placeholder names', async () => {
     requestAiJsonMock.mockResolvedValueOnce({
       nameCn: '  玩具车  ',
