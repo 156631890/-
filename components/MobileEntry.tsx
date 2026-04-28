@@ -134,12 +134,14 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
       const newImages: DraftImage[] = [];
       for (const file of files) {
         const b64 = await processImageFile(file);
+        if (!isMounted.current) return;
         newImages.push({
           id: Math.random().toString(36).substr(2, 9) + Date.now(),
           url: b64,
           timestamp: Date.now()
         });
       }
+      if (!isMounted.current) return;
       setFolders(prev => prev.map(f => f.id === activeFolderId ? { ...f, images: [...f.images, ...newImages] } : f));
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -242,6 +244,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
     const result = format === 'excel'
       ? await exportExcel({ type, products: items, settings: exportSettings })
       : await exportPdf({ type, products: items, settings: exportSettings });
+    if (!isMounted.current) return;
 
     if (result.skippedImages > 0) {
       alert(`${result.skippedImages} product image(s) could not be exported.`);
