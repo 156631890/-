@@ -31,12 +31,14 @@ Copy `.env.example` to `.env.local` and configure the Codex reverse-proxy API:
 VITE_AI_PROXY_BASE_URL=http://127.0.0.1:3001/v1
 VITE_AI_PROXY_API_KEY=
 VITE_AI_PROXY_MODE=openai-compatible
+VITE_AI_PROXY_INPUT_MODE=multimodal
 VITE_AI_MODEL=gemini-2.5-flash
 VITE_AI_TIMEOUT_MS=60000
 ```
 
 `VITE_AI_PROXY_MODE=openai-compatible` calls `{baseUrl}/chat/completions`.
 `VITE_AI_PROXY_MODE=gemini-compatible` calls `{baseUrl}/models/{model}:generateContent`.
+`VITE_AI_PROXY_INPUT_MODE=text-only` supports text-only OpenAI-compatible APIs such as DeepSeek, but image workflows require a vision-capable proxy.
 
 All `VITE_` values are visible in the browser bundle. Use a restricted proxy token for `VITE_AI_PROXY_API_KEY`; keep provider credentials on the reverse-proxy server, not in this app.
 

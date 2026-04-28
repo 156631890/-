@@ -15,6 +15,20 @@ const toOpenAiContent = (parts: AiPart[]): Array<OpenAiTextContent | OpenAiImage
       : { type: 'image_url', image_url: { url: part.dataUrl } },
   );
 
+const toOpenAiTextContent = (parts: AiPart[]): string => {
+  const imagePart = parts.find((part) => part.type === 'image');
+  if (imagePart) {
+    throw new Error(
+      'The configured AI proxy only supports text input. Image analysis requires a vision-capable OpenAI-compatible or Gemini-compatible proxy.',
+    );
+  }
+
+  return parts
+    .filter((part): part is Extract<AiPart, { type: 'text' }> => part.type === 'text')
+    .map((part) => part.text)
+    .join('\n\n');
+};
+
 const toGeminiParts = (parts: AiPart[]): GeminiPart[] =>
   parts.map((part) => {
     if (part.type === 'text') {
@@ -88,9 +102,13 @@ export const requestAiJson = async <T>({ parts, system }: AiJsonRequest): Promis
           model: config.model,
           messages: [
             ...(system ? [{ role: 'system', content: system }] : []),
-            { role: 'user', content: toOpenAiContent(parts) },
+            {
+              role: 'user',
+              content: config.inputMode === 'text-only' ? toOpenAiTextContent(parts) : toOpenAiContent(parts),
+            },
           ],
           temperature: 0.2,
+          ...(config.inputMode === 'text-only' ? { response_format: { type: 'json_object' } } : {}),
         }
       : {
           contents: [{ role: 'user', parts: toGeminiParts(parts) }],

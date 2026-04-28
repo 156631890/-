@@ -4,6 +4,7 @@ import { requestAiJson } from './proxyClient';
 const setProxyEnv = (overrides: Record<string, string | undefined> = {}) => {
   vi.stubEnv('VITE_AI_PROXY_BASE_URL', overrides.VITE_AI_PROXY_BASE_URL ?? 'https://proxy.example/v1/');
   vi.stubEnv('VITE_AI_PROXY_MODE', overrides.VITE_AI_PROXY_MODE ?? 'openai-compatible');
+  vi.stubEnv('VITE_AI_PROXY_INPUT_MODE', overrides.VITE_AI_PROXY_INPUT_MODE ?? 'multimodal');
   vi.stubEnv('VITE_AI_MODEL', overrides.VITE_AI_MODEL ?? 'proxy-model');
   vi.stubEnv('VITE_AI_PROXY_API_KEY', overrides.VITE_AI_PROXY_API_KEY ?? 'secret');
   vi.stubEnv('VITE_AI_TIMEOUT_MS', overrides.VITE_AI_TIMEOUT_MS ?? '60000');
@@ -109,6 +110,60 @@ describe('requestAiJson', () => {
     await expect(requestAiJson<{ ok: boolean }>({ parts: [{ type: 'text', text: 'x' }] })).rejects.toThrow(
       'AI proxy request failed with 502: upstream failed',
     );
+  });
+
+  it('sends text-only OpenAI-compatible requests with string content for DeepSeek-style APIs', async () => {
+    setProxyEnv({
+      VITE_AI_PROXY_BASE_URL: 'https://api.deepseek.com',
+      VITE_AI_PROXY_INPUT_MODE: 'text-only',
+      VITE_AI_MODEL: 'deepseek-v4-flash',
+    });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await requestAiJson<{ ok: boolean }>({
+      system: 'Return JSON only.',
+      parts: [{ type: 'text', text: 'Give JSON.' }],
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.deepseek.com/chat/completions',
+      expect.objectContaining({
+        body: JSON.stringify({
+          model: 'deepseek-v4-flash',
+          messages: [
+            { role: 'system', content: 'Return JSON only.' },
+            { role: 'user', content: 'Give JSON.' },
+          ],
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
+        }),
+      }),
+    );
+  });
+
+  it('rejects image parts before calling text-only OpenAI-compatible APIs', async () => {
+    setProxyEnv({
+      VITE_AI_PROXY_BASE_URL: 'https://api.deepseek.com',
+      VITE_AI_PROXY_INPUT_MODE: 'text-only',
+      VITE_AI_MODEL: 'deepseek-v4-flash',
+    });
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      requestAiJson<{ ok: boolean }>({
+        parts: [
+          { type: 'image', dataUrl: 'data:image/png;base64,abc123' },
+          { type: 'text', text: 'Analyze this image.' },
+        ],
+      }),
+    ).rejects.toThrow('The configured AI proxy only supports text input');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('requires an explicit proxy compatibility mode', async () => {

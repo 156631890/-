@@ -1,11 +1,13 @@
 import { AIEnrichmentResult, SupplierInfo } from '../../types';
 
 export type AiProxyMode = 'openai-compatible' | 'gemini-compatible';
+export type AiProxyInputMode = 'multimodal' | 'text-only';
 
 export interface AiProxyConfig {
   baseUrl: string;
   apiKey?: string;
   mode: AiProxyMode;
+  inputMode: AiProxyInputMode;
   model: string;
   timeoutMs: number;
 }
