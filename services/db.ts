@@ -21,14 +21,28 @@ const normalizePositiveNumber = (value: unknown, fallback: number): number => {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
 };
 
+const normalizeString = (value: unknown, fallback: string): string => {
+  return typeof value === 'string' ? value : fallback;
+};
+
 const normalizeSettings = (raw: unknown): AppSettings => {
   if (!isRecord(raw)) {
     return DEFAULT_APP_SETTINGS;
   }
 
-  const invoiceConfig = isRecord(raw.invoiceConfig)
-    ? { ...DEFAULT_APP_SETTINGS.invoiceConfig, ...raw.invoiceConfig }
-    : DEFAULT_APP_SETTINGS.invoiceConfig;
+  const rawInvoiceConfig = isRecord(raw.invoiceConfig) ? raw.invoiceConfig : {};
+  const invoiceConfig = {
+    sellerName: normalizeString(rawInvoiceConfig.sellerName, DEFAULT_APP_SETTINGS.invoiceConfig.sellerName),
+    sellerAddress: normalizeString(rawInvoiceConfig.sellerAddress, DEFAULT_APP_SETTINGS.invoiceConfig.sellerAddress),
+    sellerPhone: normalizeString(rawInvoiceConfig.sellerPhone, DEFAULT_APP_SETTINGS.invoiceConfig.sellerPhone),
+    sellerEmail: normalizeString(rawInvoiceConfig.sellerEmail, DEFAULT_APP_SETTINGS.invoiceConfig.sellerEmail),
+    buyerInfo: normalizeString(rawInvoiceConfig.buyerInfo, DEFAULT_APP_SETTINGS.invoiceConfig.buyerInfo),
+    invoiceNo: normalizeString(rawInvoiceConfig.invoiceNo, DEFAULT_APP_SETTINGS.invoiceConfig.invoiceNo),
+    date: normalizeString(rawInvoiceConfig.date, DEFAULT_APP_SETTINGS.invoiceConfig.date),
+    sailing: normalizeString(rawInvoiceConfig.sailing, DEFAULT_APP_SETTINGS.invoiceConfig.sailing),
+    containerNo: normalizeString(rawInvoiceConfig.containerNo, DEFAULT_APP_SETTINGS.invoiceConfig.containerNo),
+    sealNo: normalizeString(rawInvoiceConfig.sealNo, DEFAULT_APP_SETTINGS.invoiceConfig.sealNo)
+  };
 
   return {
     id: 'default',
