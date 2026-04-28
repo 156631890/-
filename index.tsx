@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './services/legacyBrowserGlobals';
 import App from './App';
 import { AlertCircle } from 'lucide-react';
 

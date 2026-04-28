@@ -3,11 +3,9 @@ import { Camera, Save, Box, Home, Plus, Layers, Loader2, ImagePlus, ChevronRight
 import { AppSettings, DEFAULT_APP_SETTINGS, Product, ProcessingStatus, SupplierInfo, Language } from '../types';
 import { analyzeImage, enrichProductData, analyzeBusinessCard } from '../services/geminiService';
 import { translations } from '../utils/i18n';
-
-// Declare globals for CDN libraries
-declare const ExcelJS: any;
-declare const saveAs: any;
-declare const jspdf: any;
+import { exportExcel } from '../services/export/excelExport';
+import { exportPdf } from '../services/export/pdfExport';
+import { ExportType } from '../services/export/exportTypes';
 
 interface DraftImage {
   id: string;
@@ -215,50 +213,20 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
     if (isMounted.current) { alert(t.batchComplete); setViewMode('history'); }
   };
 
-  const handleExport = async (format: 'excel' | 'pdf', type: 'quotation' | 'packinglist' | 'invoice') => {
-    if (format === 'excel') {
-      if (typeof ExcelJS === 'undefined') return;
-      const workbook = new ExcelJS.Workbook();
-      const sheet = workbook.addWorksheet(type.toUpperCase());
-      const items = selectedIds.size > 0 ? products.filter(p => selectedIds.has(p.id)) : products;
-      sheet.columns = [{ header: 'Image', key: 'img', width: 20 }, { header: 'SKU', key: 'sku', width: 15 }, { header: 'Description', key: 'name', width: 35 }];
-      items.forEach((p, i) => {
-        const row = sheet.addRow({ sku: p.sku, name: p.nameEn || p.nameCn });
-        row.height = 100;
-        if (p.photoUrl && p.photoUrl.startsWith('data:image')) {
-          try {
-            const base64 = p.photoUrl.split(',')[1];
-            const imgId = workbook.addImage({ base64, extension: 'jpeg' });
-            sheet.addImage(imgId, { tl: { col: 0, row: i + 1 }, br: { col: 1, row: i + 2 }, editAs: 'twoCell' });
-          } catch(e) {}
-        }
-      });
-      const buffer = await workbook.xlsx.writeBuffer();
-      saveAs(new Blob([buffer]), `Yiwu_${type}.xlsx`);
-    } else {
-      if (typeof jspdf === 'undefined') return;
-      const items = selectedIds.size > 0 ? products.filter(p => selectedIds.has(p.id)) : products;
-      const doc = new jspdf.jsPDF('p', 'mm', 'a4');
-      doc.text(type.toUpperCase(), 14, 20);
-      const body = items.map((p, i) => ['', i+1, p.sku, p.nameEn || p.nameCn]);
-      (doc as any).autoTable({
-        head: [['Image', 'No.', 'SKU', 'Description']],
-        body: body,
-        startY: 30,
-        columnStyles: { 0: { cellWidth: 30 } },
-        didDrawCell: (data: any) => {
-          if (data.column.index === 0 && data.cell.section === 'body') {
-            const p = items[data.row.index];
-            if (p.photoUrl) doc.addImage(p.photoUrl, 'JPEG', data.cell.x+2, data.cell.y+2, 26, 26);
-          }
-        },
-        bodyStyles: { minCellHeight: 30 }
-      });
-      doc.save(`Yiwu_${type}.pdf`);
+  const handleExport = async (format: 'excel' | 'pdf', type: ExportType) => {
+    const items = selectedIds.size > 0 ? products.filter(p => selectedIds.has(p.id)) : products;
+    if (items.length === 0) return alert("No products to export.");
+
+    const exportSettings = settings || DEFAULT_APP_SETTINGS;
+    const result = format === 'excel'
+      ? await exportExcel({ type, products: items, settings: exportSettings })
+      : await exportPdf({ type, products: items, settings: exportSettings });
+
+    if (result.skippedImages > 0) {
+      alert(`${result.skippedImages} product image(s) could not be exported.`);
     }
     setShowExportMenu(false);
   };
-
   // --- RENDER VIEWS ---
 
   if (isProcessing) {

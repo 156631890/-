@@ -5,11 +5,9 @@ import { enrichProductData } from '../services/geminiService';
 import { Sparkles, RefreshCw, Settings, Database, Edit, Save as SaveIcon, X, Trash2, CheckSquare, Square, Printer, Search, Download, Package, Box as BoxIcon, Plus, UploadCloud, ZoomIn, FileText, Globe, Home, FileDown, ExternalLink } from 'lucide-react';
 import MobileEntry from './MobileEntry';
 import { translations } from '../utils/i18n';
-
-// Declare global libraries
-declare const ExcelJS: any;
-declare const saveAs: any;
-declare const jspdf: any;
+import { exportExcel } from '../services/export/excelExport';
+import { exportPdf } from '../services/export/pdfExport';
+import { ExportType } from '../services/export/exportTypes';
 
 interface DashboardProps {
   products: Product[];
@@ -70,120 +68,27 @@ const Dashboard: React.FC<DashboardProps> = ({
     };
   };
 
-  const generateExcel = async (exportType: 'master' | 'packinglist' | 'invoice' | 'quotation') => {
-    if (typeof ExcelJS === 'undefined') return alert("ExcelJS not loaded.");
-    const items = selectedIds.size > 0 ? products.filter(p => selectedIds.has(p.id)) : products;
-    if (items.length === 0) return alert("No products to export.");
-    
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet(exportType.toUpperCase());
-    const centerStyle = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    const borderStyle = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+  const getExportItems = () => selectedIds.size > 0 ? products.filter((product) => selectedIds.has(product.id)) : products;
 
-    if (exportType === 'invoice') {
-       sheet.columns = [
-         { key: 'no', width: 5 }, { key: 'sku', width: 12 }, { key: 'desc', width: 40 },
-         { key: 'hs', width: 15 }, { key: 'ctns', width: 8 }, { key: 'pkg', width: 10 },
-         { key: 'qty', width: 10 }, { key: 'unit', width: 8 }, { key: 'price', width: 12 },
-         { key: 'amount', width: 15 }
-       ];
-       sheet.mergeCells('A1:J1'); sheet.getCell('A1').value = invoiceConfig.sellerName;
-       sheet.getCell('A1').font = { bold: true, size: 16 }; sheet.getCell('A1').alignment = centerStyle;
-       sheet.mergeCells('A6:J6'); sheet.getCell('A6').value = "COMMERCIAL INVOICE"; sheet.getCell('A6').font = { bold: true, size: 20 };
-       
-       const headerRow = sheet.getRow(16);
-       headerRow.values = ['No.', 'Item NO', 'Description', 'HS CODE', 'CTNS', 'Pkg', 'QTY', 'Unit', 'Price(¥)', 'Amount(¥)'];
-       headerRow.font = { bold: true }; headerRow.alignment = centerStyle;
-       
-       items.forEach((p, i) => {
-         const cQty = Math.ceil(p.moq / (p.pcsPerBox || 1)) || 1;
-         const row = sheet.addRow([i+1, p.sku, p.nameEn||p.nameCn, p.hsCode, cQty, p.pcsPerBox, cQty*p.pcsPerBox, 'PCS', p.priceRmb, p.priceRmb * cQty * p.pcsPerBox]);
-         row.eachCell((c:any) => { c.border = borderStyle; });
-       });
-    } else {
-       sheet.columns = [
-         { header: 'Image', key: 'image', width: 20 },
-         { header: 'No.', key: 'no', width: 8 },
-         { header: 'SKU', key: 'sku', width: 15 },
-         { header: 'Description', key: 'desc', width: 40 },
-         { header: 'HS Code', key: 'hs', width: 15 },
-         { header: 'Qty', key: 'qty', width: 12 },
-         { header: 'Price (USD)', key: 'price', width: 15 },
-         { header: 'Total (USD)', key: 'total', width: 18 }
-       ];
-       sheet.getRow(1).font = { bold: true }; sheet.getRow(1).height = 30; sheet.getRow(1).alignment = centerStyle;
-
-       items.forEach((p, i) => {
-         const m = calculateMetrics(p);
-         const rowIndex = i + 2;
-         const qty = Math.ceil(p.moq / (p.pcsPerBox || 1)) * (p.pcsPerBox || 1);
-         const row = sheet.addRow({ no: i+1, sku: p.sku, desc: p.nameEn||p.nameCn, hs: p.hsCode, qty: qty, price: m.priceStockUsd, total: m.priceStockUsd * qty });
-         row.height = 110; row.alignment = centerStyle;
-         row.eachCell((c:any) => { c.border = borderStyle; });
-
-         if (p.photoUrl && p.photoUrl.startsWith('data:image')) {
-            try {
-              const base64 = p.photoUrl.split(',')[1];
-              const imageId = workbook.addImage({ base64, extension: 'jpeg' });
-              sheet.addImage(imageId, { 
-                 tl: { col: 0, row: rowIndex - 1 }, 
-                 br: { col: 1, row: rowIndex },
-                 editAs: 'twoCell' 
-              });
-            } catch (e) {}
-         }
-       });
+  const handleSkippedImages = (skippedImages: number) => {
+    if (skippedImages > 0) {
+      alert(`${skippedImages} product image(s) could not be exported.`);
     }
-    const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), `Yiwu_${exportType}_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
-  const generatePDF = async (type: 'quotation' | 'packinglist' | 'invoice') => {
-     if (typeof jspdf === 'undefined') return alert("PDF library not loaded.");
-     const items = selectedIds.size > 0 ? products.filter(p => selectedIds.has(p.id)) : products;
-     if (items.length === 0) return;
-
-     const { jsPDF } = jspdf;
-     const doc = new jsPDF('l', 'mm', 'a4'); 
-     
-     doc.setFontSize(20); doc.text(type.toUpperCase(), 14, 20);
-     doc.setFontSize(10); doc.text(invoiceConfig.sellerName, 14, 28);
-     doc.text(`Date: ${new Date().toLocaleDateString()}`, 250, 20, { align: 'right' });
-
-     const head = type === 'quotation' 
-        ? [['Image', 'No.', 'SKU', 'Description', 'HS Code', 'Qty', 'Price(USD)', 'Total(USD)']]
-        : [['Image', 'No.', 'SKU', 'Description', 'Qty', 'Cartons', 'CBM', 'G.W']];
-
-     const body = items.map((p, i) => {
-        const m = calculateMetrics(p);
-        const ctns = Math.ceil(p.moq / (p.pcsPerBox || 1)) || 1;
-        const qty = ctns * (p.pcsPerBox || 1);
-        return type === 'quotation'
-          ? ['', i+1, p.sku, p.nameEn || p.nameCn, p.hsCode, qty, `$${m.priceStockUsd}`, `$${(m.priceStockUsd * qty).toFixed(2)}`]
-          : ['', i+1, p.sku, p.nameEn || p.nameCn, qty, ctns, (m.cbm * ctns).toFixed(3), ((p.gwKg || 0) * ctns).toFixed(2)];
-     });
-
-     (doc as any).autoTable({
-        head: head,
-        body: body,
-        startY: 35,
-        rowPageBreak: 'avoid',
-        styles: { cellPadding: 2, fontSize: 8, valign: 'middle', halign: 'center' },
-        columnStyles: { 0: { cellWidth: 30 }, 3: { halign: 'left' } },
-        didDrawCell: (data: any) => {
-           if (data.column.index === 0 && data.cell.section === 'body') {
-              const p = items[data.row.index];
-              if (p.photoUrl) {
-                doc.addImage(p.photoUrl, 'JPEG', data.cell.x + 2, data.cell.y + 2, 26, 26);
-              }
-           }
-        },
-        bodyStyles: { minCellHeight: 30 }
-     });
-
-     doc.save(`Yiwu_${type}_${Date.now()}.pdf`);
+  const handleExportExcel = async (type: ExportType) => {
+    const items = getExportItems();
+    if (items.length === 0) return alert("No products to export.");
+    const result = await exportExcel({ type, products: items, settings });
+    handleSkippedImages(result.skippedImages);
   };
 
+  const handleExportPdf = async (type: ExportType) => {
+    const items = getExportItems();
+    if (items.length === 0) return alert("No products to export.");
+    const result = await exportPdf({ type, products: items, settings });
+    handleSkippedImages(result.skippedImages);
+  };
   const handleBulkEnrich = async () => {
     setIsBulkProcessing(true);
     const itemsToProcess = products.filter(p => selectedIds.has(p.id));
@@ -236,7 +141,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="p-6 border-b flex justify-between items-center"><h2 className="text-xl font-bold flex items-center gap-2"><Settings size={20} className="text-indigo-600"/> {t.invoiceConfig}</h2><button onClick={() => setShowInvoiceModal(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20}/></button></div>
             <div className="p-8 space-y-6">
                <div><label className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t.companyName}</label><input className="w-full mt-1 border rounded-lg p-3" value={invoiceConfig.sellerName} onChange={e => updateInvoiceConfig({ sellerName: e.target.value })} /></div>
-               <div className="flex gap-4"><button onClick={() => { setShowInvoiceModal(false); generateExcel('invoice'); }} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><Download size={20} /> Excel (.xlsx)</button><button onClick={() => { setShowInvoiceModal(false); generatePDF('invoice'); }} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><FileDown size={20} /> PDF (.pdf)</button></div>
+               <div className="flex gap-4"><button onClick={() => { setShowInvoiceModal(false); handleExportExcel('invoice'); }} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><Download size={20} /> Excel (.xlsx)</button><button onClick={() => { setShowInvoiceModal(false); handleExportPdf('invoice'); }} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2"><FileDown size={20} /> PDF (.pdf)</button></div>
             </div>
           </div>
         </div>
@@ -252,14 +157,14 @@ const Dashboard: React.FC<DashboardProps> = ({
              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
                 <span className="text-[10px] font-black text-slate-400 px-2 uppercase">Export</span>
                 <div className="h-6 w-px bg-slate-200 mx-1"></div>
-                <button onClick={() => generateExcel('master')} title="Master Excel" className="p-2 hover:bg-white rounded-lg text-slate-600 hover:text-indigo-600"><Database size={18} /></button>
+                <button onClick={() => handleExportExcel('master')} title="Master Excel" className="p-2 hover:bg-white rounded-lg text-slate-600 hover:text-indigo-600"><Database size={18} /></button>
                 <div className="flex bg-white rounded-lg shadow-sm border border-slate-200 divide-x">
-                   <button onClick={() => generateExcel('quotation')} className="px-2 py-1.5 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50">QTN.xlsx</button>
-                   <button onClick={() => generatePDF('quotation')} className="px-2 py-1.5 text-[10px] font-bold text-red-600 hover:bg-red-50">QTN.pdf</button>
+                   <button onClick={() => handleExportExcel('quotation')} className="px-2 py-1.5 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50">QTN.xlsx</button>
+                   <button onClick={() => handleExportPdf('quotation')} className="px-2 py-1.5 text-[10px] font-bold text-red-600 hover:bg-red-50">QTN.pdf</button>
                 </div>
                 <div className="flex bg-white rounded-lg shadow-sm border border-slate-200 divide-x ml-1">
-                   <button onClick={() => generateExcel('packinglist')} className="px-2 py-1.5 text-[10px] font-bold text-green-600 hover:bg-green-50">PKL.xlsx</button>
-                   <button onClick={() => generatePDF('packinglist')} className="px-2 py-1.5 text-[10px] font-bold text-red-600 hover:bg-red-50">PKL.pdf</button>
+                   <button onClick={() => handleExportExcel('packinglist')} className="px-2 py-1.5 text-[10px] font-bold text-green-600 hover:bg-green-50">PKL.xlsx</button>
+                   <button onClick={() => handleExportPdf('packinglist')} className="px-2 py-1.5 text-[10px] font-bold text-red-600 hover:bg-red-50">PKL.pdf</button>
                 </div>
                 <button onClick={() => setShowInvoiceModal(true)} className="p-2 hover:bg-white rounded-lg text-slate-600"><Printer size={18}/></button>
              </div>
