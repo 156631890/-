@@ -65,6 +65,11 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
 
   // --- HELPERS ---
 
+  const getErrorMessage = (error: unknown) => {
+    if (error instanceof Error && error.message) return error.message;
+    return String(error || 'Unknown error');
+  };
+
   const calculateMetrics = (p: Partial<Product>) => {
     const cbm = (p.boxLength && p.boxWidth && p.boxHeight) ? (p.boxLength * p.boxWidth * p.boxHeight) / 1000000 : 0;
     const priceStockUsd = (p.priceRmb || 0) > 0 ? (p.priceRmb || 0) / settings.usdRmbRate : 0;
@@ -121,7 +126,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
         setViewMode('folderDetail');
       } catch (err) {
         console.error(err);
-        if (isMounted.current) alert("Business card analysis failed. Check the AI proxy settings and try again.");
+        if (isMounted.current) alert(`Business card analysis failed: ${getErrorMessage(err)}`);
       } finally {
         if (isMounted.current) setIsProcessing(false);
       }
@@ -230,6 +235,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
         } catch (e) {
           failed++;
           console.error('Failed to process selected image:', e);
+          setProcessingStatus({ current: processed + 1, total, text: `Failed: ${getErrorMessage(e)}` });
         }
         processed++;
       }
