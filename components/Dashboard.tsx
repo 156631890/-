@@ -44,6 +44,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   const freightRateCbm = settings.freightRateCbm;
   const usdRmbRate = settings.usdRmbRate;
   const visibleProducts = filterProducts(products, searchQuery);
+  const visibleProductIds = new Set(visibleProducts.map((product) => product.id));
+  const visibleSelectedIds = new Set([...selectedIds].filter((id) => visibleProductIds.has(id)));
 
   const updateSettings = (patch: Partial<AppSettings>) => {
     onSettingsChange({ ...settings, ...patch });
@@ -58,7 +60,11 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const calculateMetrics = (product: Product): ProductMetrics => calculateProductMetrics(product, settings);
 
-  const getExportItems = () => selectedIds.size > 0 ? products.filter((product) => selectedIds.has(product.id)) : products;
+  const getExportItems = () => {
+    const selectedVisible = visibleProducts.filter((product) => selectedIds.has(product.id));
+    if (selectedVisible.length > 0) return selectedVisible;
+    return searchQuery ? visibleProducts : products;
+  };
 
   const handleSkippedImages = (skippedImages: number) => {
     if (skippedImages > 0) {
@@ -82,7 +88,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const handleBulkEnrich = async () => {
     setIsBulkProcessing(true);
-    const itemsToProcess = products.filter((product) => selectedIds.has(product.id));
+    const itemsToProcess = visibleProducts.filter((product) => selectedIds.has(product.id));
     let success = 0;
     let failed = 0;
     setBulkProgress({ current: 0, total: itemsToProcess.length });
@@ -102,8 +108,24 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
 
     setIsBulkProcessing(false);
-    setSelectedIds(new Set());
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      itemsToProcess.forEach((product) => next.delete(product.id));
+      return next;
+    });
     alert(`AI enrichment complete. Success: ${success}. Failed: ${failed}.`);
+  };
+
+  const handleDeleteVisibleSelected = () => {
+    const idsToDelete = Array.from(visibleSelectedIds);
+    if (idsToDelete.length === 0) return;
+    if (!confirm("Delete?")) return;
+    onDeleteProduct?.(idsToDelete);
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      idsToDelete.forEach((id) => next.delete(id));
+      return next;
+    });
   };
 
   const handleEnrichment = async (product: Product) => {
@@ -215,11 +237,11 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         <div className="px-4 py-2 md:px-8 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-4">
-          {selectedIds.size > 0 ? (
+          {visibleSelectedIds.size > 0 ? (
             <div className="flex items-center gap-4 bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-100 w-full md:w-auto">
-              <span className="text-sm font-bold text-indigo-700 flex items-center gap-2"><CheckSquare size={16} /> {selectedIds.size} {t.selected}</span>
+              <span className="text-sm font-bold text-indigo-700 flex items-center gap-2"><CheckSquare size={16} /> {visibleSelectedIds.size} {t.selected}</span>
               <button onClick={handleBulkEnrich} className="text-xs font-bold text-indigo-600 flex items-center gap-1"><Sparkles size={14} /> {t.aiEnrich}</button>
-              <button onClick={() => { if (confirm("Delete?")) onDeleteProduct?.(Array.from(selectedIds)); setSelectedIds(new Set()); }} className="text-xs font-bold text-red-600 flex items-center gap-1"><Trash2 size={14} /> {t.delete}</button>
+              <button onClick={handleDeleteVisibleSelected} className="text-xs font-bold text-red-600 flex items-center gap-1"><Trash2 size={14} /> {t.delete}</button>
             </div>
           ) : (
             <div className="flex gap-6 text-sm text-slate-500 w-full overflow-x-auto no-scrollbar">
