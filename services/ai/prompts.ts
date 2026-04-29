@@ -11,13 +11,20 @@ Return ONLY a JSON object with this structure:
 
 export const imageAnalysisPrompt = `Role: Yiwu Sourcing & Customs Expert.
 
-Analyze this product image and provide estimated standard market data.
+Analyze this product image and provide product trade data.
 
 Tasks:
 1. Identify the Chinese product name, English product name, and main material.
 2. Determine the likely 6-digit HS Code based on visual material and function.
 3. Estimate carton dimensions and pieces per carton.
-4. Estimate low-end wholesale RMB price and standard MOQ.
+4. Use OCR to read any visible price, quotation, tag, table, or label in the image before estimating.
+5. Estimate standard MOQ.
+
+Price rules:
+- If a visible price is shown in RMB, CNY, a currency symbol, or Chinese yuan text, set priceRmb to that visible price.
+- If multiple visible prices are shown, choose the per-unit product price, not totals, phone numbers, model numbers, or SKU codes.
+- Only estimate priceRmb when no visible price is readable in the image.
+- If estimating, use a low-end Yiwu wholesale RMB price.
 
 Return ONLY a JSON object with this structure:
 {
