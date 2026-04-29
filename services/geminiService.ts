@@ -7,6 +7,11 @@ const normalizeNumber = (value: unknown) => Number(value) || 0;
 
 const normalizeText = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 
+const normalizeChinaHsCode = (value: unknown) => {
+  const digits = normalizeText(value).replace(/\D/g, '');
+  return digits.length === 10 ? digits : '';
+};
+
 const toImageDataUrl = (base64Image: string) =>
   base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}`;
 
@@ -30,7 +35,7 @@ const normalizeImageAnalysis = (result: ImageAnalysisResult): ImageAnalysisResul
   const nameCn = normalizeText(result.nameCn);
   const nameEn = normalizeText(result.nameEn);
   const materialEn = normalizeText(result.materialEn);
-  const hsCode = normalizeText(result.hsCode);
+  const hsCode = normalizeChinaHsCode(result.hsCode);
   const normalized = {
     nameCn: nameCn || nameEn,
     priceRmb: normalizeNumber(result.priceRmb),
@@ -75,9 +80,13 @@ export const analyzeBusinessCard = async (base64Image: string): Promise<Supplier
 
 export const enrichProductData = async (nameCn: string): Promise<AIEnrichmentResult> => {
   try {
-    return await requestAiJson<AIEnrichmentResult>({
+    const result = await requestAiJson<AIEnrichmentResult>({
       parts: [{ type: 'text', text: productEnrichmentPrompt(nameCn) }],
     });
+    return {
+      ...result,
+      hsCode: normalizeChinaHsCode(result.hsCode),
+    };
   } catch (error) {
     console.error('AI Enrichment failed:', error);
     throw error;

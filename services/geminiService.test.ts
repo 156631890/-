@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { requestAiJson } from './ai/proxyClient';
-import { analyzeBusinessCard, analyzeImage } from './geminiService';
+import { analyzeBusinessCard, analyzeImage, enrichProductData } from './geminiService';
 
 vi.mock('./ai/proxyClient', () => ({
   requestAiJson: vi.fn(),
@@ -72,10 +72,10 @@ describe('geminiService proxy failures', () => {
 
   it('rejects named product JSON without pricing, MOQ, and packing numbers', async () => {
     requestAiJsonMock.mockResolvedValueOnce({
-      nameCn: '玩具车',
+      nameCn: 'Toy car',
       nameEn: 'Toy Car',
       materialEn: 'Plastic',
-      hsCode: '950300',
+      hsCode: '9503006000',
       priceRmb: 0,
       moq: 0,
       boxLength: 0,
@@ -91,10 +91,10 @@ describe('geminiService proxy failures', () => {
 
   it('rejects product JSON without complete packing numbers', async () => {
     requestAiJsonMock.mockResolvedValueOnce({
-      nameCn: '玩具车',
+      nameCn: 'Toy car',
       nameEn: 'Toy Car',
       materialEn: 'Plastic',
-      hsCode: '950300',
+      hsCode: '9503006000',
       priceRmb: 12.5,
       moq: 24,
       boxLength: 60,
@@ -110,12 +110,12 @@ describe('geminiService proxy failures', () => {
 
   it('normalizes valid product JSON without placeholder names', async () => {
     requestAiJsonMock.mockResolvedValueOnce({
-      nameCn: '  玩具车  ',
+      nameCn: '  Toy car  ',
       priceRmb: '12.5',
       moq: '24',
       nameEn: '',
       materialEn: 'Plastic',
-      hsCode: '950300',
+      hsCode: '9503006000',
       boxLength: '60',
       boxWidth: '40',
       boxHeight: '30',
@@ -123,16 +123,71 @@ describe('geminiService proxy failures', () => {
     });
 
     await expect(analyzeImage('data:image/jpeg;base64,abc')).resolves.toEqual({
-      nameCn: '玩具车',
+      nameCn: 'Toy car',
       priceRmb: 12.5,
       moq: 24,
-      nameEn: '玩具车',
+      nameEn: 'Toy car',
+      materialEn: 'Plastic',
+      hsCode: '9503006000',
+      boxLength: 60,
+      boxWidth: 40,
+      boxHeight: 30,
+      pcsPerBox: 12,
+    });
+  });
+
+  it('keeps only China Customs 10-digit HS codes in image analysis results', async () => {
+    requestAiJsonMock.mockResolvedValueOnce({
+      nameCn: 'Toy car',
+      priceRmb: 12.5,
+      moq: 24,
+      nameEn: '',
       materialEn: 'Plastic',
       hsCode: '950300',
       boxLength: 60,
       boxWidth: 40,
       boxHeight: 30,
       pcsPerBox: 12,
+    });
+
+    await expect(analyzeImage('data:image/jpeg;base64,abc')).resolves.toMatchObject({
+      hsCode: '',
+    });
+  });
+
+  it('normalizes formatted China Customs 10-digit HS codes in image analysis results', async () => {
+    requestAiJsonMock.mockResolvedValueOnce({
+      nameCn: 'Toy car',
+      priceRmb: 12.5,
+      moq: 24,
+      nameEn: '',
+      materialEn: 'Plastic',
+      hsCode: '9503.00.6000',
+      boxLength: 60,
+      boxWidth: 40,
+      boxHeight: 30,
+      pcsPerBox: 12,
+    });
+
+    await expect(analyzeImage('data:image/jpeg;base64,abc')).resolves.toMatchObject({
+      hsCode: '9503006000',
+    });
+  });
+
+  it('keeps only China Customs 10-digit HS codes in product enrichment results', async () => {
+    requestAiJsonMock.mockResolvedValueOnce({
+      nameEn: 'Toy car',
+      nameEs: 'Toy car',
+      materialEn: 'Plastic',
+      hsCode: '950300',
+      usage: 'Toy',
+      taxRate: 0,
+      categoryMain: 'Toys',
+      categorySub: 'Toy vehicles',
+    });
+
+    await expect(enrichProductData('Toy car')).resolves.toMatchObject({
+      hsCode: '',
     });
   });
 });
