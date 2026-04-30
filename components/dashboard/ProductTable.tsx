@@ -195,7 +195,73 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                   )}
                 </div>
               </td>
-              <td className="px-4 py-4 text-right font-mono">RMB {product.priceRmb}</td>
+              <td className="px-4 py-4 text-right font-mono">
+                {isEditing ? (
+                  <div className="flex flex-col gap-1 min-w-[180px]">
+                    <input
+                      type="number"
+                      className="w-full border rounded p-1 text-xs text-right"
+                      placeholder="RMB / pc"
+                      value={editForm.priceRmb ?? ''}
+                      onChange={(event) => onEditChange({ priceRmb: Number(event.target.value) })}
+                    />
+                    <input
+                      className="w-full border rounded p-1 text-xs text-right"
+                      placeholder="Raw price"
+                      value={editForm.priceRawText || ''}
+                      onChange={(event) => onEditChange({ priceRawText: event.target.value })}
+                    />
+                    <div className="grid grid-cols-3 gap-1">
+                      <select
+                        className="border rounded p-1 text-xs bg-white"
+                        value={editForm.priceCurrency || 'RMB'}
+                        onChange={(event) => onEditChange({ priceCurrency: event.target.value as Product['priceCurrency'] })}
+                      >
+                        <option value="RMB">RMB</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="UNKNOWN">UNK</option>
+                      </select>
+                      <select
+                        className="border rounded p-1 text-xs bg-white"
+                        value={editForm.priceUnit || 'pc'}
+                        onChange={(event) => onEditChange({ priceUnit: event.target.value as Product['priceUnit'] })}
+                      >
+                        <option value="pc">pc</option>
+                        <option value="box">box</option>
+                        <option value="set">set</option>
+                        <option value="dozen">dozen</option>
+                        <option value="pack">pack</option>
+                        <option value="carton">carton</option>
+                        <option value="unknown">unknown</option>
+                      </select>
+                      <input
+                        type="number"
+                        className="border rounded p-1 text-xs text-right"
+                        placeholder="Qty"
+                        value={editForm.priceUnitQuantity ?? ''}
+                        onChange={(event) => onEditChange({ priceUnitQuantity: Number(event.target.value) })}
+                      />
+                    </div>
+                    <input
+                      className="w-full border rounded p-1 text-xs text-right"
+                      placeholder="Price note"
+                      value={editForm.priceNormalizationNote || ''}
+                      onChange={(event) => onEditChange({ priceNormalizationNote: event.target.value })}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1">
+                    <div>RMB {product.priceRmb} / pc</div>
+                    {product.priceRawText && (
+                      <div className="text-[10px] text-slate-500 whitespace-normal">Raw: {product.priceRawText}</div>
+                    )}
+                    {product.priceNormalizationNote && (
+                      <div className="text-[10px] text-slate-400 whitespace-normal">{product.priceNormalizationNote}</div>
+                    )}
+                  </div>
+                )}
+              </td>
               <td className="px-4 py-4 text-right font-mono text-emerald-600 font-bold">
                 EUR {metrics.landedCostEuro.toFixed(2)}
               </td>

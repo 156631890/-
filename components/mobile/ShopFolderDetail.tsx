@@ -32,7 +32,12 @@ const emptyManualValues: ManualProductValues = {
   materialEn: '',
   hsCode: '',
   hsCodeReviewed: false,
+  priceRawText: '',
+  priceCurrency: 'RMB',
+  priceUnit: 'pc',
+  priceUnitQuantity: 1,
   priceRmb: 0,
+  priceNormalizationNote: '',
   moq: 0,
   shopNo: '',
   boxLength: 0,
@@ -134,6 +139,26 @@ export const ShopFolderDetail: React.FC<ShopFolderDetailProps> = ({
               <input type="number" className="rounded-lg border p-2 text-sm" placeholder="MOQ" value={manualValues.moq || ''} onChange={(event) => updateManualValues({ moq: Number(event.target.value) })} />
               <input type="number" className="rounded-lg border p-2 text-sm" placeholder="Pcs/Ctn" value={manualValues.pcsPerBox || ''} onChange={(event) => updateManualValues({ pcsPerBox: Number(event.target.value) })} />
             </div>
+            <input className="w-full rounded-lg border p-2 text-sm" placeholder="Raw price text, e.g. 30 RMB/dozen" value={manualValues.priceRawText || ''} onChange={(event) => updateManualValues({ priceRawText: event.target.value })} />
+            <div className="grid grid-cols-3 gap-2">
+              <select className="rounded-lg border p-2 text-sm bg-white" value={manualValues.priceCurrency || 'RMB'} onChange={(event) => updateManualValues({ priceCurrency: event.target.value as ManualProductValues['priceCurrency'] })}>
+                <option value="RMB">RMB</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="UNKNOWN">UNKNOWN</option>
+              </select>
+              <select className="rounded-lg border p-2 text-sm bg-white" value={manualValues.priceUnit || 'pc'} onChange={(event) => updateManualValues({ priceUnit: event.target.value as ManualProductValues['priceUnit'] })}>
+                <option value="pc">pc</option>
+                <option value="box">box</option>
+                <option value="set">set</option>
+                <option value="dozen">dozen</option>
+                <option value="pack">pack</option>
+                <option value="carton">carton</option>
+                <option value="unknown">unknown</option>
+              </select>
+              <input type="number" className="rounded-lg border p-2 text-sm" placeholder="Qty/unit" value={manualValues.priceUnitQuantity || ''} onChange={(event) => updateManualValues({ priceUnitQuantity: Number(event.target.value) })} />
+            </div>
+            <input className="w-full rounded-lg border p-2 text-sm" placeholder="Price normalization note" value={manualValues.priceNormalizationNote || ''} onChange={(event) => updateManualValues({ priceNormalizationNote: event.target.value })} />
             <div className="grid grid-cols-4 gap-2">
               <input type="number" className="rounded-lg border p-2 text-sm" placeholder="L" value={manualValues.boxLength || ''} onChange={(event) => updateManualValues({ boxLength: Number(event.target.value) })} />
               <input type="number" className="rounded-lg border p-2 text-sm" placeholder="W" value={manualValues.boxWidth || ''} onChange={(event) => updateManualValues({ boxWidth: Number(event.target.value) })} />

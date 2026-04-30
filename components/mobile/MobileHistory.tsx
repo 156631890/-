@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckSquare, Database, Download, Grid, Square, X } from 'lucide-react';
+import { CheckSquare, Database, Download, Grid, Square, Trash2, X } from 'lucide-react';
 import { Product } from '../../types';
 import { ExportType } from '../../services/export/exportTypes';
 
@@ -8,6 +8,7 @@ interface MobileHistoryLabels {
   history: string;
   cancel: string;
   select: string;
+  delete: string;
   myShops: string;
 }
 
@@ -21,6 +22,8 @@ interface MobileHistoryProps {
   onToggleProduct: (productId: string) => void;
   setShowExportMenu: (show: boolean) => void;
   onExport: (format: 'excel' | 'pdf', type: ExportType) => void;
+  onDeleteSelected: () => void;
+  canDeleteSelected: boolean;
   onOpenFolders: () => void;
 }
 
@@ -34,6 +37,8 @@ export const MobileHistory: React.FC<MobileHistoryProps> = ({
   onToggleProduct,
   setShowExportMenu,
   onExport,
+  onDeleteSelected,
+  canDeleteSelected,
   onOpenFolders
 }) => {
   return (
@@ -87,6 +92,13 @@ export const MobileHistory: React.FC<MobileHistoryProps> = ({
         <div className="absolute bottom-24 w-full px-4 flex gap-3">
           <button onClick={() => setShowExportMenu(true)} className="flex-1 bg-indigo-600 text-white rounded-xl h-12 flex items-center justify-center gap-2 font-bold shadow-lg">
             <Download size={20} /> {labels.exportOptions}
+          </button>
+          <button
+            onClick={onDeleteSelected}
+            disabled={!canDeleteSelected}
+            className="flex-1 bg-red-600 text-white rounded-xl h-12 flex items-center justify-center gap-2 font-bold shadow-lg disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none"
+          >
+            <Trash2 size={20} /> {labels.delete}
           </button>
         </div>
       ) : (

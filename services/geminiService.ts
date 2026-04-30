@@ -3,6 +3,7 @@ import { businessCardPrompt, imageAnalysisPrompt, productEnrichmentPrompt } from
 import { requestAiJson } from './ai/proxyClient';
 import { BusinessCardResult, ImageAnalysisResult } from './ai/types';
 import { normalizeChinaHsCode } from '../utils/hsCode';
+import { normalizePriceMetadata } from '../utils/priceNormalization';
 
 const normalizeNumber = (value: unknown) => Number(value) || 0;
 
@@ -32,9 +33,10 @@ const normalizeImageAnalysis = (result: ImageAnalysisResult): ImageAnalysisResul
   const nameEn = normalizeText(result.nameEn);
   const materialEn = normalizeText(result.materialEn);
   const hsCode = normalizeChinaHsCode(result.hsCode);
+  const price = normalizePriceMetadata(result as unknown as Record<string, unknown>);
   const normalized = {
     nameCn: nameCn || nameEn,
-    priceRmb: normalizeNumber(result.priceRmb),
+    ...price,
     moq: normalizeNumber(result.moq),
     nameEn: nameEn || nameCn,
     materialEn,

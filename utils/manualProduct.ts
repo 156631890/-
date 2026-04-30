@@ -1,5 +1,6 @@
 import { AppSettings, DraftFolder, ManualProductValues, ProcessingStatus, Product } from '../types';
 import { normalizeChinaHsCode } from './hsCode';
+import { normalizePriceMetadata } from './priceNormalization';
 
 interface CreateManualProductInput {
   folder: DraftFolder;
@@ -23,6 +24,7 @@ export function createManualProduct({
   values,
 }: CreateManualProductInput): Product {
   const hsCode = normalizeChinaHsCode(values.hsCode);
+  const price = normalizePriceMetadata(values as unknown as Record<string, unknown>);
   const product: Product = {
     id,
     sku,
@@ -33,7 +35,7 @@ export function createManualProduct({
     materialEn: values.materialEn.trim(),
     hsCode,
     hsCodeReviewed: Boolean(hsCode && values.hsCodeReviewed),
-    priceRmb: toNumber(values.priceRmb),
+    ...price,
     moq: toNumber(values.moq),
     shopNo: values.shopNo.trim() || folder.supplier.address || folder.name,
     boxLength: toNumber(values.boxLength),

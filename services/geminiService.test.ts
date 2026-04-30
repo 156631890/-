@@ -174,6 +174,35 @@ describe('geminiService proxy failures', () => {
     });
   });
 
+  it('normalizes product image price metadata', async () => {
+    requestAiJsonMock.mockResolvedValueOnce({
+      nameCn: 'Toy car',
+      priceRawText: ' 30 RMB/dozen ',
+      priceCurrency: 'RMB',
+      priceUnit: 'dozen',
+      priceUnitQuantity: 12,
+      priceRmb: '2.5',
+      priceNormalizationNote: ' Visible 30 RMB/dozen normalized to 2.5 RMB/pc ',
+      moq: 24,
+      nameEn: '',
+      materialEn: 'Plastic',
+      hsCode: '9503006000',
+      boxLength: 60,
+      boxWidth: 40,
+      boxHeight: 30,
+      pcsPerBox: 12,
+    });
+
+    await expect(analyzeImage('data:image/jpeg;base64,abc')).resolves.toMatchObject({
+      priceRawText: '30 RMB/dozen',
+      priceCurrency: 'RMB',
+      priceUnit: 'dozen',
+      priceUnitQuantity: 12,
+      priceRmb: 2.5,
+      priceNormalizationNote: 'Visible 30 RMB/dozen normalized to 2.5 RMB/pc',
+    });
+  });
+
   it('keeps only China Customs 10-digit HS codes in product enrichment results', async () => {
     requestAiJsonMock.mockResolvedValueOnce({
       nameEn: 'Toy car',

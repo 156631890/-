@@ -255,7 +255,12 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
             nameCn: aiData.nameCn,
             nameEn: aiData.nameEn,
             materialEn: aiData.materialEn,
+            priceRawText: aiData.priceRawText,
+            priceCurrency: aiData.priceCurrency,
+            priceUnit: aiData.priceUnit,
+            priceUnitQuantity: aiData.priceUnitQuantity,
             priceRmb: aiData.priceRmb,
+            priceNormalizationNote: aiData.priceNormalizationNote,
             moq: aiData.moq,
             shopNo: item.supplier.address || "TBD",
             hsCode: aiData.hsCode,
@@ -321,6 +326,14 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
       alert(`${result.skippedImages} product image(s) could not be exported.`);
     }
     setShowExportMenu(false);
+  };
+
+  const handleDeleteSelectedHistory = () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} selected product(s)?`)) return;
+    onDeleteProduct?.(ids);
+    setSelectedIds(new Set());
   };
   // --- RENDER VIEWS ---
 
@@ -393,6 +406,8 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
       }}
       setShowExportMenu={setShowExportMenu}
       onExport={handleExport}
+      onDeleteSelected={handleDeleteSelectedHistory}
+      canDeleteSelected={selectedIds.size > 0 && Boolean(onDeleteProduct)}
       onOpenFolders={() => setViewMode('folders')}
     />
   );

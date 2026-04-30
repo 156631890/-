@@ -11,6 +11,7 @@ import { formatHsCodeReviewWarning, getHsCodeReviewSummary, hasHsCodeReviewIssue
 import { filterProducts } from '../utils/productFilters';
 import { calculateProductMetrics, ProductMetrics } from '../utils/productMetrics';
 import { normalizeChinaHsCode } from '../utils/hsCode';
+import { normalizePriceMetadata } from '../utils/priceNormalization';
 import { ProcessingOverlay } from './common/ProcessingOverlay';
 import { ProductTable } from './dashboard/ProductTable';
 
@@ -164,8 +165,10 @@ const Dashboard: React.FC<DashboardProps> = ({
     if (product) {
       const merged = { ...product, ...editForm };
       const normalizedHsCode = normalizeChinaHsCode(merged.hsCode);
+      const normalizedPrice = normalizePriceMetadata(merged as Record<string, unknown>);
       merged.hsCode = normalizedHsCode;
       merged.hsCodeReviewed = Boolean(normalizedHsCode && merged.hsCodeReviewed);
+      Object.assign(merged, normalizedPrice);
       const metrics = calculateMetrics(merged);
       onUpdateProduct({ ...merged, ...metrics });
     }

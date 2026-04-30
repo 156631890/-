@@ -76,6 +76,11 @@ export interface ManualProductValues {
   materialEn: string;
   hsCode: string;
   hsCodeReviewed: boolean;
+  priceRawText?: string;
+  priceCurrency?: 'RMB' | 'USD' | 'EUR' | 'UNKNOWN';
+  priceUnit?: 'pc' | 'box' | 'set' | 'dozen' | 'pack' | 'carton' | 'unknown';
+  priceUnitQuantity?: number;
+  priceNormalizationNote?: string;
   priceRmb: number;
   moq: number;
   shopNo: string;
@@ -123,6 +128,11 @@ export interface Product {
 
   // --- 3. Finance & Costing ---
   priceRmb: number;        // COST price RMB
+  priceRawText?: string;
+  priceCurrency?: 'RMB' | 'USD' | 'EUR' | 'UNKNOWN';
+  priceUnit?: 'pc' | 'box' | 'set' | 'dozen' | 'pack' | 'carton' | 'unknown';
+  priceUnitQuantity?: number;
+  priceNormalizationNote?: string;
   // Global Configs applied at calc time, stored here for record
   exRateEuroRmb?: number;  // 汇率 EURO TO RMB
   freightRate?: number;    // 运费 m3 TRANSPORT COST

@@ -29,15 +29,28 @@ HS Code rules:
 - This is not a binding customs ruling and must be manually reviewed before declaration.
 
 Price rules:
-- If a visible price is shown in RMB, CNY, a currency symbol, or Chinese yuan text, set priceRmb to that visible price.
+- Always preserve the visible price text in priceRawText when a visible price is readable.
+- priceRmb must be the normalized RMB per piece value used for costing.
+- If a visible price is shown in RMB, CNY, a currency symbol, or Chinese yuan text per piece, set priceRmb to that visible RMB per piece price.
+- If a visible RMB price is per box, set, dozen, pack, or carton, set priceUnit and priceUnitQuantity, then normalize priceRmb to RMB per piece.
+- If a visible USD or EUR price is shown, set priceCurrency to USD or EUR, preserve priceRawText, and only normalize to RMB per piece when the conversion and unit quantity are clear enough to explain.
 - If multiple visible prices are shown, choose the per-unit product price, not totals, phone numbers, model numbers, or SKU codes.
 - Only estimate priceRmb when no visible price is readable in the image.
-- If estimating, use a low-end Yiwu wholesale RMB price.
+- If estimating, use a low-end Yiwu wholesale RMB per piece price and set priceNormalizationNote to say it is an estimate.
+- Use priceCurrency values only from RMB, USD, EUR, UNKNOWN.
+- Use priceUnit values only from pc, box, set, dozen, pack, carton, unknown.
+- Set priceUnitQuantity to the number of pieces per price unit. Use 1 for pc. Use 12 for dozen. Use 0 if the unit quantity is unclear.
+- Use priceNormalizationNote to explain the visible price conversion, for example: "Visible 30 RMB/dozen normalized to 2.5 RMB/pc".
 
 Return ONLY a JSON object with this structure:
 {
   "nameCn": "string",
+  "priceRawText": "string",
+  "priceCurrency": "RMB | USD | EUR | UNKNOWN",
+  "priceUnit": "pc | box | set | dozen | pack | carton | unknown",
+  "priceUnitQuantity": number,
   "priceRmb": number,
+  "priceNormalizationNote": "string",
   "moq": number,
   "nameEn": "string",
   "materialEn": "string",

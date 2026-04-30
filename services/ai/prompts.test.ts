@@ -8,6 +8,15 @@ describe('imageAnalysisPrompt', () => {
     expect(imageAnalysisPrompt).toContain('Only estimate priceRmb');
   });
 
+  it('asks for raw price unit metadata and normalized RMB per piece', () => {
+    expect(imageAnalysisPrompt).toContain('priceRawText');
+    expect(imageAnalysisPrompt).toContain('priceCurrency');
+    expect(imageAnalysisPrompt).toContain('priceUnit');
+    expect(imageAnalysisPrompt).toContain('priceUnitQuantity');
+    expect(imageAnalysisPrompt).toContain('priceNormalizationNote');
+    expect(imageAnalysisPrompt).toContain('RMB per piece');
+  });
+
   it('asks for China Customs 10-digit HS code suggestions with manual review fallback', () => {
     expect(imageAnalysisPrompt).toContain('China Customs 10-digit commodity code');
     expect(imageAnalysisPrompt).toContain('Do not output a 6-digit international HS code');

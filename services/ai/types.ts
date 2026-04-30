@@ -31,7 +31,12 @@ export interface AiJsonRequest {
 
 export interface ImageAnalysisResult {
   nameCn: string;
+  priceRawText?: string;
+  priceCurrency?: 'RMB' | 'USD' | 'EUR' | 'UNKNOWN';
+  priceUnit?: 'pc' | 'box' | 'set' | 'dozen' | 'pack' | 'carton' | 'unknown';
+  priceUnitQuantity?: number;
   priceRmb: number;
+  priceNormalizationNote?: string;
   moq: number;
   nameEn: string;
   materialEn: string;
