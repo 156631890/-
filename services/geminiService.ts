@@ -61,6 +61,20 @@ const normalizeImageAnalysis = (result: ImageAnalysisResult): ImageAnalysisResul
   return normalized;
 };
 
+const fillMissingImageHsCode = async (result: ImageAnalysisResult): Promise<ImageAnalysisResult> => {
+  if (result.hsCode) return result;
+
+  const productHint = [result.nameCn, result.nameEn, result.materialEn].filter(Boolean).join(' / ');
+  const enrichment = await requestAiJson<AIEnrichmentResult>({
+    parts: [{ type: 'text', text: productEnrichmentPrompt(productHint || result.nameCn) }],
+  });
+
+  return {
+    ...result,
+    hsCode: normalizeChinaHsCode(enrichment.hsCode),
+  };
+};
+
 export const analyzeBusinessCard = async (base64Image: string): Promise<SupplierInfo> => {
   try {
     const result = await requestAiJson<BusinessCardResult>({
@@ -100,7 +114,7 @@ export const analyzeImage = async (base64Image: string): Promise<ImageAnalysisRe
       ],
     });
 
-    return normalizeImageAnalysis(result);
+    return await fillMissingImageHsCode(normalizeImageAnalysis(result));
   } catch (error) {
     console.error('Image Analysis failed:', error);
     throw error;

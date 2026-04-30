@@ -137,18 +137,22 @@ describe('geminiService proxy failures', () => {
   });
 
   it('keeps only China Customs 10-digit HS codes in image analysis results', async () => {
-    requestAiJsonMock.mockResolvedValueOnce({
-      nameCn: 'Toy car',
-      priceRmb: 12.5,
-      moq: 24,
-      nameEn: '',
-      materialEn: 'Plastic',
-      hsCode: '950300',
-      boxLength: 60,
-      boxWidth: 40,
-      boxHeight: 30,
-      pcsPerBox: 12,
-    });
+    requestAiJsonMock
+      .mockResolvedValueOnce({
+        nameCn: 'Toy car',
+        priceRmb: 12.5,
+        moq: 24,
+        nameEn: '',
+        materialEn: 'Plastic',
+        hsCode: '950300',
+        boxLength: 60,
+        boxWidth: 40,
+        boxHeight: 30,
+        pcsPerBox: 12,
+      })
+      .mockResolvedValueOnce({
+        hsCode: '950300',
+      });
 
     await expect(analyzeImage('data:image/jpeg;base64,abc')).resolves.toMatchObject({
       hsCode: '',
@@ -172,6 +176,37 @@ describe('geminiService proxy failures', () => {
     await expect(analyzeImage('data:image/jpeg;base64,abc')).resolves.toMatchObject({
       hsCode: '9503006000',
     });
+  });
+
+  it('fills missing image-analysis HS codes from product enrichment', async () => {
+    requestAiJsonMock
+      .mockResolvedValueOnce({
+        nameCn: 'Toy car',
+        priceRmb: 12.5,
+        moq: 24,
+        nameEn: '',
+        materialEn: 'Plastic',
+        hsCode: '',
+        boxLength: 60,
+        boxWidth: 40,
+        boxHeight: 30,
+        pcsPerBox: 12,
+      })
+      .mockResolvedValueOnce({
+        nameEn: 'Toy Car',
+        nameEs: 'Coche de juguete',
+        materialEn: 'Plastic',
+        hsCode: '9503006000',
+        usage: 'Toy',
+        taxRate: 0,
+        categoryMain: 'Toys',
+        categorySub: 'Toy vehicles',
+      });
+
+    await expect(analyzeImage('data:image/jpeg;base64,abc')).resolves.toMatchObject({
+      hsCode: '9503006000',
+    });
+    expect(requestAiJsonMock).toHaveBeenCalledTimes(2);
   });
 
   it('normalizes product image price metadata', async () => {

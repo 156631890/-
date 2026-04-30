@@ -24,8 +24,8 @@ Tasks:
 HS Code rules:
 - hsCode is an AI suggestion for China Customs 10-digit commodity code only.
 - Do not output a 6-digit international HS code.
-- If the image lacks decisive classification information, return an empty string for hsCode.
-- Do not invent a code when material, use, or construction is uncertain.
+- Always provide the best available China Customs 10-digit hsCode suggestion from the visible product category, material, intended use, and construction.
+- If subheading certainty is limited, choose the most likely China Customs 10-digit commodity code and rely on manual review before declaration.
 - This is not a binding customs ruling and must be manually reviewed before declaration.
 
 Price rules:
@@ -75,7 +75,8 @@ Tasks:
 Important guidelines:
 - Prioritize accuracy for HS Code and material composition.
 - Do not output a 6-digit international HS code.
-- If unsure, return an empty string for hsCode instead of guessing.
+- Always provide the best available China Customs 10-digit hsCode suggestion from the likely product category, material, intended use, and construction.
+- If subheading certainty is limited, choose the most likely China Customs 10-digit commodity code and rely on manual review before declaration.
 - This is an AI suggestion, not a binding customs ruling, and must be manually reviewed before declaration.
 
 Return ONLY a JSON object with this structure:
