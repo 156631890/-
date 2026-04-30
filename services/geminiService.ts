@@ -2,15 +2,11 @@ import { AIEnrichmentResult, SupplierInfo } from '../types';
 import { businessCardPrompt, imageAnalysisPrompt, productEnrichmentPrompt } from './ai/prompts';
 import { requestAiJson } from './ai/proxyClient';
 import { BusinessCardResult, ImageAnalysisResult } from './ai/types';
+import { normalizeChinaHsCode } from '../utils/hsCode';
 
 const normalizeNumber = (value: unknown) => Number(value) || 0;
 
 const normalizeText = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
-
-const normalizeChinaHsCode = (value: unknown) => {
-  const digits = normalizeText(value).replace(/\D/g, '');
-  return digits.length === 10 ? digits : '';
-};
 
 const toImageDataUrl = (base64Image: string) =>
   base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}`;

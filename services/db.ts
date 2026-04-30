@@ -1,9 +1,10 @@
-import { AppSettings, DEFAULT_APP_SETTINGS, Product } from '../types';
+import { AppSettings, DEFAULT_APP_SETTINGS, DraftFolder, Product } from '../types';
 
 const DB_NAME = 'YiwuSourcingDB';
 const PRODUCT_STORE = 'products';
 const SETTINGS_STORE = 'settings';
-const DB_VERSION = 2;
+const DRAFT_FOLDER_STORE = 'draftFolders';
+const DB_VERSION = 3;
 
 const waitForTransaction = (transaction: IDBTransaction): Promise<void> => {
   return new Promise((resolve, reject) => {
@@ -82,6 +83,9 @@ const getDB = (): Promise<IDBDatabase> => {
       if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
         db.createObjectStore(SETTINGS_STORE, { keyPath: 'id' });
       }
+      if (!db.objectStoreNames.contains(DRAFT_FOLDER_STORE)) {
+        db.createObjectStore(DRAFT_FOLDER_STORE, { keyPath: 'id' });
+      }
     };
   });
 };
@@ -147,6 +151,43 @@ export const dbService = {
     const transaction = db.transaction(SETTINGS_STORE, 'readwrite');
     const store = transaction.objectStore(SETTINGS_STORE);
     store.put(normalizeSettings(settings));
+    await waitForTransaction(transaction);
+  },
+
+  getDraftFolders: async (): Promise<DraftFolder[]> => {
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(DRAFT_FOLDER_STORE, 'readonly');
+      const store = transaction.objectStore(DRAFT_FOLDER_STORE);
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve((request.result || []) as DraftFolder[]);
+      request.onerror = () => reject(request.error);
+    });
+  },
+
+  saveDraftFolder: async (folder: DraftFolder): Promise<void> => {
+    const db = await getDB();
+    const transaction = db.transaction(DRAFT_FOLDER_STORE, 'readwrite');
+    const store = transaction.objectStore(DRAFT_FOLDER_STORE);
+    store.put(folder);
+    await waitForTransaction(transaction);
+  },
+
+  saveDraftFolders: async (folders: DraftFolder[]): Promise<void> => {
+    const db = await getDB();
+    const transaction = db.transaction(DRAFT_FOLDER_STORE, 'readwrite');
+    const store = transaction.objectStore(DRAFT_FOLDER_STORE);
+    store.clear();
+    folders.forEach((folder) => store.put(folder));
+    await waitForTransaction(transaction);
+  },
+
+  deleteDraftFolder: async (id: string): Promise<void> => {
+    const db = await getDB();
+    const transaction = db.transaction(DRAFT_FOLDER_STORE, 'readwrite');
+    const store = transaction.objectStore(DRAFT_FOLDER_STORE);
+    store.delete(id);
     await waitForTransaction(transaction);
   }
 };

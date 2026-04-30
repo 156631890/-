@@ -7,8 +7,10 @@ import { translations } from '../utils/i18n';
 import { exportExcel } from '../services/export/excelExport';
 import { exportPdf } from '../services/export/pdfExport';
 import { ExportType } from '../services/export/exportTypes';
+import { formatHsCodeReviewWarning, getHsCodeReviewSummary, hasHsCodeReviewIssues } from '../services/export/hsCodeReview';
 import { filterProducts } from '../utils/productFilters';
 import { calculateProductMetrics, ProductMetrics } from '../utils/productMetrics';
+import { normalizeChinaHsCode } from '../utils/hsCode';
 import { ProcessingOverlay } from './common/ProcessingOverlay';
 import { ProductTable } from './dashboard/ProductTable';
 
@@ -72,9 +74,16 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
+  const confirmHsCodeReviewBeforeExport = (items: Product[]) => {
+    const summary = getHsCodeReviewSummary(items);
+    if (!hasHsCodeReviewIssues(summary)) return true;
+    return confirm(formatHsCodeReviewWarning(summary));
+  };
+
   const handleExportExcel = async (type: ExportType) => {
     const items = getExportItems();
     if (items.length === 0) return alert("No products to export.");
+    if (!confirmHsCodeReviewBeforeExport(items)) return;
     const result = await exportExcel({ type, products: items, settings });
     handleSkippedImages(result.skippedImages);
   };
@@ -82,6 +91,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const handleExportPdf = async (type: ExportType) => {
     const items = getExportItems();
     if (items.length === 0) return alert("No products to export.");
+    if (!confirmHsCodeReviewBeforeExport(items)) return;
     const result = await exportPdf({ type, products: items, settings });
     handleSkippedImages(result.skippedImages);
   };
@@ -97,7 +107,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       try {
         const result = await enrichProductData(product.nameCn);
         const metrics = calculateMetrics({ ...product, ...result });
-        onUpdateProduct({ ...product, ...result, ...metrics, status: ProcessingStatus.REVIEW_NEEDED });
+        onUpdateProduct({ ...product, ...result, ...metrics, hsCodeReviewed: false, status: ProcessingStatus.REVIEW_NEEDED });
         success += 1;
       } catch (error) {
         failed += 1;
@@ -134,7 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     try {
       const result = await enrichProductData(product.nameCn);
       const metrics = calculateMetrics({ ...product, ...result });
-      onUpdateProduct({ ...product, ...result, ...metrics, status: ProcessingStatus.REVIEW_NEEDED });
+      onUpdateProduct({ ...product, ...result, ...metrics, hsCodeReviewed: false, status: ProcessingStatus.REVIEW_NEEDED });
     } catch (error) {
       console.error('Failed to enrich product', product.id, error);
       onUpdateProduct({ ...product, status: ProcessingStatus.DRAFT });
@@ -153,6 +163,9 @@ const Dashboard: React.FC<DashboardProps> = ({
     const product = products.find((item) => item.id === editingId);
     if (product) {
       const merged = { ...product, ...editForm };
+      const normalizedHsCode = normalizeChinaHsCode(merged.hsCode);
+      merged.hsCode = normalizedHsCode;
+      merged.hsCodeReviewed = Boolean(normalizedHsCode && merged.hsCodeReviewed);
       const metrics = calculateMetrics(merged);
       onUpdateProduct({ ...merged, ...metrics });
     }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AppSettings, DEFAULT_APP_SETTINGS, Product, ProcessingStatus, SupplierInfo, Language } from '../types';
+import { AppSettings, DEFAULT_APP_SETTINGS, DraftFolder, DraftImage, Language, ManualProductValues, Product, ProcessingStatus } from '../types';
 import { analyzeImage, analyzeBusinessCard } from '../services/geminiService';
 import { translations } from '../utils/i18n';
 import { exportExcel } from '../services/export/excelExport';
@@ -10,20 +10,10 @@ import { ProcessingOverlay } from './common/ProcessingOverlay';
 import { ShopFolderList } from './mobile/ShopFolderList';
 import { ShopFolderDetail } from './mobile/ShopFolderDetail';
 import { MobileHistory } from './mobile/MobileHistory';
-
-export interface DraftImage {
-  id: string;
-  url: string;
-  timestamp: number;
-}
-
-export interface DraftFolder {
-  id: string;
-  name: string;
-  supplier: SupplierInfo;
-  images: DraftImage[];
-  timestamp: number;
-}
+import { dbService } from '../services/db';
+import { formatHsCodeReviewWarning, getHsCodeReviewSummary, hasHsCodeReviewIssues } from '../services/export/hsCodeReview';
+import { removeDraftImagesFromFolder, sortDraftFolders, upsertDraftFolder } from '../utils/draftFolders';
+import { createManualProduct } from '../utils/manualProduct';
 
 interface MobileEntryProps {
   onSave: (product: Product) => void | Promise<void>;
@@ -65,6 +55,20 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
     return () => { isMounted.current = false; };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    dbService.getDraftFolders()
+      .then((storedFolders) => {
+        if (!cancelled && isMounted.current) {
+          setFolders(sortDraftFolders(storedFolders));
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load draft folders:', error);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   // --- HELPERS ---
 
   const getErrorMessage = (error: unknown) => {
@@ -76,6 +80,23 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
     const cbm = (p.boxLength && p.boxWidth && p.boxHeight) ? (p.boxLength * p.boxWidth * p.boxHeight) / 1000000 : 0;
     const priceStockUsd = (p.priceRmb || 0) > 0 ? (p.priceRmb || 0) / settings.usdRmbRate : 0;
     return { cbm: Number(cbm.toFixed(4)), priceStockUsd: Number(priceStockUsd.toFixed(3)) };
+  };
+
+  const updateDraftFolders = (updater: (current: DraftFolder[]) => DraftFolder[]) => {
+    setFolders((current) => {
+      const next = sortDraftFolders(updater(current));
+      dbService.saveDraftFolders(next).catch((error) => {
+        console.error('Failed to save draft folders:', error);
+        if (isMounted.current) alert('Draft folders could not be saved. Please check storage space.');
+      });
+      return next;
+    });
+  };
+
+  const confirmHsCodeReviewBeforeExport = (items: Product[]) => {
+    const summary = getHsCodeReviewSummary(items);
+    if (!hasHsCodeReviewIssues(summary)) return true;
+    return confirm(formatHsCodeReviewWarning(summary));
   };
 
   const processImageFile = (file: File): Promise<string> => {
@@ -123,7 +144,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
           images: [],
           timestamp: Date.now()
         };
-        setFolders(prev => [newFolder, ...prev]);
+        updateDraftFolders(prev => upsertDraftFolder(prev, newFolder));
         setActiveFolderId(newFolder.id);
         setViewMode('folderDetail');
       } catch (err) {
@@ -148,7 +169,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
       images: [],
       timestamp: Date.now()
     };
-    setFolders(prev => [newFolder, ...prev]);
+    updateDraftFolders(prev => upsertDraftFolder(prev, newFolder));
     setActiveFolderId(newFolder.id);
     setViewMode('folderDetail');
   };
@@ -168,7 +189,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
         });
       }
       if (!isMounted.current) return;
-      setFolders(prev => prev.map(f => f.id === activeFolderId ? { ...f, images: [...f.images, ...newImages] } : f));
+      updateDraftFolders(prev => prev.map(f => f.id === activeFolderId ? { ...f, images: [...f.images, ...newImages] } : f));
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -238,6 +259,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
             moq: aiData.moq,
             shopNo: item.supplier.address || "TBD",
             hsCode: aiData.hsCode,
+            hsCodeReviewed: false,
             boxLength: aiData.boxLength,
             boxWidth: aiData.boxWidth,
             boxHeight: aiData.boxHeight,
@@ -246,10 +268,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
             timestamp: Date.now()
           };
           await onSave({ ...newProduct, ...calculateMetrics(newProduct) });
-          // Clean up processed draft
-          setFolders(prev => prev
-            .map(f => f.id === activeFolderId ? { ...f, images: f.images.filter(img => img.id !== item.img.id) } : f)
-            .filter(f => f.id !== activeFolderId || f.images.length > 0));
+          updateDraftFolders(prev => removeDraftImagesFromFolder(prev, activeFolderId, [item.img.id]));
           setSelectedImageIds(prev => { const next = new Set(prev); next.delete(item.img.id); return next; });
           success++;
         } catch (e) {
@@ -265,9 +284,32 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
     if (isMounted.current) { alert(`Batch complete. Success: ${success}. Failed: ${failed}.`); setViewMode('history'); }
   };
 
+  const handleSaveManualProduct = async (values: ManualProductValues) => {
+    if (!activeFolderId) return;
+    const activeFolder = folders.find(f => f.id === activeFolderId);
+    if (!activeFolder) return;
+    const selectedImage = activeFolder.images.find(img => selectedImageIds.has(img.id));
+    if (!selectedImage) return alert('Select one product photo before saving manual entry.');
+
+    const product = createManualProduct({
+      folder: activeFolder,
+      imageUrl: selectedImage.url,
+      id: Date.now().toString() + "_" + Math.random().toString(36).substr(2, 5),
+      sku: `YW-${Math.floor(Math.random() * 90000) + 10000}`,
+      timestamp: Date.now(),
+      settings,
+      values,
+    });
+    await onSave(product);
+    updateDraftFolders(prev => removeDraftImagesFromFolder(prev, activeFolderId, [selectedImage.id]));
+    setSelectedImageIds(prev => { const next = new Set(prev); next.delete(selectedImage.id); return next; });
+    setViewMode('history');
+  };
+
   const handleExport = async (format: 'excel' | 'pdf', type: ExportType) => {
     const items = selectedIds.size > 0 ? products.filter(p => selectedIds.has(p.id)) : products;
     if (items.length === 0) return alert("No products to export.");
+    if (!confirmHsCodeReviewBeforeExport(items)) return;
 
     const exportSettings = settings || DEFAULT_APP_SETTINGS;
     const result = format === 'excel'
@@ -328,6 +370,7 @@ const MobileEntry: React.FC<MobileEntryProps> = ({
         onToggleImage={toggleImageSelection}
         onAddPhotos={handleAddPhotos}
         onProcessSelected={handleProcessSelected}
+        onSaveManualProduct={handleSaveManualProduct}
         canAnalyzeImages={canAnalyzeImages}
       />
     );

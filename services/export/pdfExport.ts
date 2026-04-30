@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { calculateProductMetrics, getCartonQuantity, getOrderQuantity } from '../../utils/productMetrics';
-import { ExportInput, ExportResult, ExportType } from './exportTypes';
+import { ExportInput, ExportResult } from './exportTypes';
+import { buildPdfTable } from './pdfTables';
 
 interface TableCellData {
   column: { index: number };
@@ -16,47 +16,6 @@ function getDateStamp(): string {
 function getImageFormat(photoUrl: string | undefined): 'JPEG' | 'PNG' | null {
   if (!photoUrl?.startsWith('data:image/')) return null;
   return photoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-}
-
-function getTable(type: ExportType, input: ExportInput): { head: string[][]; body: Array<Array<string | number>> } {
-  if (type === 'quotation' || type === 'master') {
-    return {
-      head: [['Image', 'No.', 'SKU', 'Description', 'HS Code', 'Qty', 'Price(USD)', 'Total(USD)']],
-      body: input.products.map((product, index) => {
-        const metrics = calculateProductMetrics(product, input.settings);
-        const quantity = getOrderQuantity(product);
-        return [
-          '',
-          index + 1,
-          product.sku,
-          product.nameEn || product.nameCn,
-          product.hsCode || '',
-          quantity,
-          `$${metrics.priceStockUsd}`,
-          `$${(metrics.priceStockUsd * quantity).toFixed(2)}`,
-        ];
-      }),
-    };
-  }
-
-  return {
-    head: [['Image', 'No.', 'SKU', 'Description', 'Qty', 'Cartons', 'CBM', 'G.W']],
-    body: input.products.map((product, index) => {
-      const metrics = calculateProductMetrics(product, input.settings);
-      const cartons = getCartonQuantity(product);
-      const quantity = getOrderQuantity(product);
-      return [
-        '',
-        index + 1,
-        product.sku,
-        product.nameEn || product.nameCn,
-        quantity,
-        cartons,
-        (metrics.cbm * cartons).toFixed(3),
-        ((product.gwKg || 0) * cartons).toFixed(2),
-      ];
-    }),
-  };
 }
 
 export async function exportPdf(input: ExportInput): Promise<ExportResult> {
@@ -74,7 +33,7 @@ export async function exportPdf(input: ExportInput): Promise<ExportResult> {
   }
   doc.text(`Date: ${invoiceConfig.date || getDateStamp()}`, 280, 20, { align: 'right' });
 
-  const table = getTable(input.type, input);
+  const table = buildPdfTable(input.type, input);
   autoTable(doc, {
     head: table.head,
     body: table.body,

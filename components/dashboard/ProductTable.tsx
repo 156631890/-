@@ -105,15 +105,77 @@ export const ProductTable: React.FC<ProductTableProps> = ({
                 </div>
               </td>
               <td className="px-4 py-4 max-w-[200px] truncate">
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 max-w-[260px] whitespace-normal">
                   {isEditing ? (
-                    <input
-                      className="w-full border p-1"
-                      value={editForm.nameEn || ''}
-                      onChange={(event) => onEditChange({ nameEn: event.target.value })}
-                    />
+                    <>
+                      <input
+                        className="w-full border rounded p-1 text-xs"
+                        placeholder="English name"
+                        value={editForm.nameEn || ''}
+                        onChange={(event) => onEditChange({ nameEn: event.target.value })}
+                      />
+                      <div className="grid grid-cols-2 gap-1">
+                        <input
+                          className="w-full border rounded p-1 text-xs"
+                          placeholder="Material"
+                          value={editForm.materialEn || ''}
+                          onChange={(event) => onEditChange({ materialEn: event.target.value })}
+                        />
+                        <input
+                          className="w-full border rounded p-1 text-xs"
+                          placeholder="HS Code"
+                          value={editForm.hsCode || ''}
+                          onChange={(event) => onEditChange({ hsCode: event.target.value })}
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-1">
+                        <input
+                          className="w-full border rounded p-1 text-xs"
+                          placeholder="Main category"
+                          value={editForm.categoryMain || ''}
+                          onChange={(event) => onEditChange({ categoryMain: event.target.value })}
+                        />
+                        <input
+                          className="w-full border rounded p-1 text-xs"
+                          placeholder="Sub category"
+                          value={editForm.categorySub || ''}
+                          onChange={(event) => onEditChange({ categorySub: event.target.value })}
+                        />
+                        <input
+                          type="number"
+                          className="w-full border rounded p-1 text-xs"
+                          placeholder="Tax %"
+                          value={editForm.taxRate ?? ''}
+                          onChange={(event) => onEditChange({ taxRate: Number(event.target.value) })}
+                        />
+                      </div>
+                      <label className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(editForm.hsCodeReviewed)}
+                          onChange={(event) => onEditChange({ hsCodeReviewed: event.target.checked })}
+                        />
+                        HS Code reviewed
+                      </label>
+                    </>
                   ) : (
-                    product.nameEn || '-'
+                    <>
+                      <div>{product.nameEn || '-'}</div>
+                      <div className="text-[10px] font-mono text-slate-500">
+                        HS: {product.hsCode || 'Missing'}{' '}
+                        <span className={`font-bold ${product.hsCodeReviewed ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {product.hsCodeReviewed ? 'Reviewed' : 'Needs review'}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        {product.materialEn || 'Material TBD'} | Duty {product.taxRate ?? 0}%
+                      </div>
+                      {(product.categoryMain || product.categorySub) && (
+                        <div className="text-[10px] text-slate-400">
+                          {[product.categoryMain, product.categorySub].filter(Boolean).join(' / ')}
+                        </div>
+                      )}
+                    </>
                   )}
                   {product.groundingUrls && product.groundingUrls.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">

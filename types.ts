@@ -56,6 +56,36 @@ export interface SupplierInfo {
   email?: string;
 }
 
+export interface DraftImage {
+  id: string;
+  url: string;
+  timestamp: number;
+}
+
+export interface DraftFolder {
+  id: string;
+  name: string;
+  supplier: SupplierInfo;
+  images: DraftImage[];
+  timestamp: number;
+}
+
+export interface ManualProductValues {
+  nameCn: string;
+  nameEn: string;
+  materialEn: string;
+  hsCode: string;
+  hsCodeReviewed: boolean;
+  priceRmb: number;
+  moq: number;
+  shopNo: string;
+  boxLength: number;
+  boxWidth: number;
+  boxHeight: number;
+  pcsPerBox: number;
+  taxRate: number;
+}
+
 export interface Product {
   id: string;
   sku: string;
@@ -107,6 +137,7 @@ export interface Product {
   
   // --- 4. Trade & Compliance ---
   hsCode?: string;         // 海关代码 HSCODE
+  hsCodeReviewed?: boolean;
   origin?: string;         // 原产地 ORIGIN
   moq: number;             // 起订量 MOQ
   preorderDays?: number;   // 交期 PREORDER

@@ -1,7 +1,6 @@
 import React from 'react';
 import { ChevronRight, Database, Folder, FolderPlus, Grid, ScanLine, Store } from 'lucide-react';
-import { Language } from '../../types';
-import { DraftFolder } from '../MobileEntry';
+import { DraftFolder, Language } from '../../types';
 
 interface ShopFolderListLabels {
   myShops: string;
